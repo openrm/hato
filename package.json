@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/openrm/amqp-node/issues"
   },
-  "homepage": "https://github.com/openrm/amqp-node#readme"
+  "homepage": "https://github.com/openrm/amqp-node#readme",
+  "dependencies": {
+    "amqplib": "^0.5.5"
+  }
 }
