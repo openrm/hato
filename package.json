@@ -1,0 +1,22 @@
+{
+  "name": "amqp-node",
+  "version": "0.0.1",
+  "description": "A real-world AMQP framework in Node.js",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openrm/amqp-node.git"
+  },
+  "keywords": [
+    "amqp"
+  ],
+  "author": "Open Room Inc.",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/openrm/amqp-node/issues"
+  },
+  "homepage": "https://github.com/openrm/amqp-node#readme"
+}
