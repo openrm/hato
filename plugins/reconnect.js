@@ -17,7 +17,7 @@ module.exports = function(options = {}) {
                     .catch((err) => {
                         if (c + 1 >= retries) throw err;
 
-                        const wait = Math.pow(factor, c) * min;
+                        const wait = Math.min(max, Math.pow(factor, c) * min);
                         logger.warn(`[AMQP:reconnect] Connection failed. Try reconnecting in ${wait}ms...`, err);
 
                         return new Promise((resolve, reject) => {
