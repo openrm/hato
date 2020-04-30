@@ -12,13 +12,13 @@ module.exports = function(options = {}) {
     this.wrappers = {
         [CONNECTION]: ({ logger }) => (connect) => {
             const retryable = (c, ...args) => {
-                if (0 < c) logger.debug('[AMQP:reconnect] Reconnecting...');
+                if (0 < c) logger.debug('[AMQP:retry] Retrying to connect...');
                 return connect(...args)
                     .catch((err) => {
                         if (c + 1 >= retries) throw err;
 
                         const wait = Math.min(max, Math.pow(factor, c) * min);
-                        logger.warn(`[AMQP:reconnect] Connection failed. Try reconnecting in ${wait}ms...`, err.message);
+                        logger.warn(`[AMQP:retry] Connection failed. Retrying in ${wait}ms...`, err.message);
 
                         return new Promise((resolve, reject) => {
                             setTimeout(() => retryable(c + 1, ...args).then(resolve).catch(reject), wait);
