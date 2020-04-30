@@ -1,18 +1,20 @@
 const Client = require('./lib');
+const plugins = require('./plugins');
 
 // default plugins
 const {
     Reconnection,
     GracefulShutdown
-} = require('./plugins');
+} = plugins;
 
-const client = new Client({
+// TODO(naggingant) export named constructor instead
+module.exports = new Client({
     plugins: [
         new Reconnection(),
         new GracefulShutdown()
     ]
 });
 
-module.exports = client;
 module.exports.Client = Client;
 module.exports.constants = require('./lib/constants');
+module.exports.plugins = plugins;
