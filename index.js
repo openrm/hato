@@ -9,6 +9,7 @@ const {
 
 // TODO(naggingant) export named constructor instead
 module.exports = new Client({
+    logger: console,
     plugins: [
         new Reconnection(),
         new GracefulShutdown()
