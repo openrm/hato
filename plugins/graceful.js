@@ -4,8 +4,6 @@ module.exports = class {
 
     scopes = [Scopes.CONNECTION];
 
-    constructor() {}
-
     wrap(scope, { logger }) {
         if (scope === Scopes.CONNECTION) {
             return (connect) => (url, socketOptions) => {

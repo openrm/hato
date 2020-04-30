@@ -18,7 +18,7 @@ module.exports = function(options = {}) {
                         if (c + 1 >= retries) throw err;
 
                         const wait = Math.min(max, Math.pow(factor, c) * min);
-                        logger.warn(`[AMQP:reconnect] Connection failed. Try reconnecting in ${wait}ms...`, err);
+                        logger.warn(`[AMQP:reconnect] Connection failed. Try reconnecting in ${wait}ms...`, err.message);
 
                         return new Promise((resolve, reject) => {
                             setTimeout(() => retryable(c + 1, ...args).then(resolve).catch(reject), wait);
