@@ -8,7 +8,7 @@ module.exports = class Plugin {
 
     wrap(scope, context) {
         if (this.wrappers && typeof this.wrappers[scope] === 'function') {
-            return this.wrappers[scope](scope, context);
+            return this.wrappers[scope](context);
         }
         else throw new Error(`Plugin not implemented for scope '${scope}'`);
     }

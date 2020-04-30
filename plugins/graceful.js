@@ -4,7 +4,7 @@ const { Scopes } = require('../lib/constants');
 module.exports = class extends Plugin {
 
     wrappers = {
-        [Scopes.CONNECTION]() {
+        [Scopes.CONNECTION]({ logger }) {
             return (connect) => (url, socketOptions) => {
                 let closing = false;
                 return connect(url, socketOptions)
