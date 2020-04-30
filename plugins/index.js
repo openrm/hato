@@ -1,4 +1,5 @@
 module.exports = {
     GracefulShutdown: require('./graceful'),
-    Reconnection: require('./reconnect')
+    Reconnection: require('./reconnect'),
+    ConnectionRecovery: require('./recover')
 };

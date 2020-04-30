@@ -4,7 +4,8 @@ const plugins = require('./plugins');
 // default plugins
 const {
     Reconnection,
-    GracefulShutdown
+    GracefulShutdown,
+    ConnectionRecovery
 } = plugins;
 
 // TODO(naggingant) export named constructor instead
@@ -12,7 +13,8 @@ module.exports = new Client({
     logger: console,
     plugins: [
         new Reconnection(),
-        new GracefulShutdown()
+        new GracefulShutdown(),
+        new ConnectionRecovery()
     ]
 });
 
