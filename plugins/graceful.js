@@ -1,11 +1,10 @@
+const Plugin = require('./base');
 const { Scopes } = require('../lib/constants');
 
-module.exports = class {
+module.exports = class extends Plugin {
 
-    scopes = [Scopes.CONNECTION];
-
-    wrap(scope, { logger }) {
-        if (scope === Scopes.CONNECTION) {
+    wrappers = {
+        [Scopes.CONNECTION]() {
             return (connect) => (url, socketOptions) => {
                 let closing = false;
                 return connect(url, socketOptions)
@@ -23,7 +22,7 @@ module.exports = class {
                         return conn;
                     });
             }
-        } else throw new Error(`Plugin does not implement for scope '${scope}'`);
+        }
     }
 
 }
