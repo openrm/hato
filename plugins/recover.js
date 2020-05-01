@@ -23,6 +23,7 @@ class Recoverable extends EventEmitter {
                 timer(timeout)
             ]).catch((err) => {
                 this.logger.error('[AMQP:recover] Recovery failed.', err.message);
+                this.emit('close', err);
                 // TODO(naggingant) should abort all attempts initiated
             });
         });
@@ -32,11 +33,9 @@ class Recoverable extends EventEmitter {
     }
 
     _bind(conn, ...events) {
-        events
-            .map(eventName => {
-                const listener = (...args) => this.emit(eventName, ...args);
-                conn.on(eventName, listener);
-            });
+        events.forEach(eventName => {
+            conn.on(eventName, this.emit.bind(this, eventName));
+        });
     }
 
     _unbind(conn, ...events) {
