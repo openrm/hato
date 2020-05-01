@@ -12,7 +12,7 @@ module.exports = function(options = {}) {
     this.wrappers = {
         [CONNECTION]: ({ logger, cancelled }) => (connect) => {
             cancelled.then((reason) => {
-                logger.warn('[AMQP:retry] Retries will be cancelled. Reason:', reason.message);
+                logger.warn('[AMQP:retry] Retries will be cancelled. Reason:', reason && reason.message);
             });
 
             const retryable = (c, ...args) => {
