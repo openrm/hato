@@ -20,4 +20,5 @@ module.exports = new Client({
 
 module.exports.Client = Client;
 module.exports.constants = require('./lib/constants');
+module.exports.errors = require('./lib/errors');
 module.exports.plugins = plugins;

@@ -5,12 +5,16 @@ module.exports = function(options = {}) {
     const {
         retries = 5,
         min = 1 * 1e3,
-        max = 60 * 1e3,
+        max = 10 * 1e3,
         factor = 2
     } = options;
 
     this.wrappers = {
-        [CONNECTION]: ({ logger }) => (connect) => {
+        [CONNECTION]: ({ logger, cancelled }) => (connect) => {
+            cancelled.then((reason) => {
+                logger.warn('[AMQP:retry] Retries will be cancelled. Reason:', reason.message);
+            });
+
             const retryable = (c, ...args) => {
                 if (0 < c) logger.debug('[AMQP:retry] Retrying to connect...');
                 return connect(...args)
@@ -21,14 +25,15 @@ module.exports = function(options = {}) {
                         logger.warn(`[AMQP:retry] Connection failed. Retrying in ${wait}ms...`, err.message);
 
                         return new Promise((resolve, reject) => {
-                            setTimeout(() => retryable(c + 1, ...args).then(resolve).catch(reject), wait);
+                            const id = setTimeout(() =>
+                                retryable(c + 1, ...args).then(resolve).catch(reject), wait);
+
+                            cancelled.then(() => clearTimeout(id));
                         });
                     });
             };
 
-            const wrapped = (...args) => retryable(0, ...args);
-
-            return wrapped;
+            return retryable.bind(null, 0);
         }
     }
 
