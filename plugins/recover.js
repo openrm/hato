@@ -17,10 +17,12 @@ class Recoverable extends EventEmitter {
             delete this._conn;
 
             // set timeout for retries
-            setTimeout(() => cancel(new TimeoutError(timeout)), timeout);
+            const timer = setTimeout(() =>
+                cancel(new TimeoutError(timeout)), timeout);
 
             this._conn = create().catch((err) => {
                 this.logger.error('[AMQP:recover] Recovery failed.', err.message);
+                clearTimeout(timer);
                 this.emit('close', err);
             });
         });
@@ -37,6 +39,10 @@ class Recoverable extends EventEmitter {
 
     _unbind(conn, ...events) {
         events.forEach(conn.removeAllListeners.bind(conn));
+    }
+
+    close() {
+        return this._conn.then((conn) => conn.close());
     }
 
     createChannel() {
