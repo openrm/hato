@@ -60,14 +60,13 @@ module.exports = class extends Plugin {
     constructor(options) {
         super();
         this.options = options;
-    }
-
-    wrappers = {
-        [Scopes.CONNECTION](context) {
-            return (connect) => (...args) => {
-                const options = Object.assign(context, this.options);
-                return connect(...args)
-                    .then((conn) => new Recoverable(conn, connect.bind(conn, ...args), options));
+        this.wrappers = {
+            [Scopes.CONNECTION](context) {
+                return (connect) => (...args) => {
+                    const options = Object.assign(context, this.options);
+                    return connect(...args)
+                        .then((conn) => new Recoverable(conn, connect.bind(conn, ...args), options));
+                }
             }
         }
     }

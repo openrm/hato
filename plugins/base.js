@@ -1,6 +1,8 @@
 module.exports = class Plugin {
 
-    wrappers = {};
+    constructor() {
+        this.wrappers = {};
+    }
 
     get scopes() {
         return Object.keys(this.wrappers);
