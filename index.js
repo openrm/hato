@@ -9,13 +9,14 @@ const {
 } = plugins;
 
 // TODO(naggingant) export named constructor instead
-module.exports = new Client({
+module.exports.connect = (url, options) => Client.start(url, {
     logger: console,
     plugins: [
         new Retry(),
         new GracefulShutdown(),
         new Reconnection()
-    ]
+    ],
+    ...options
 });
 
 module.exports.Client = Client;
