@@ -23,32 +23,23 @@ client
     });
 
 client
-    .bind('a.routing.key')
-    .subscribe((msg) => {
+    .subscribe('a.routing.key', (msg) => {
         // queue with auto-generated name.
         // listens to the default direct exchange ''
     });
 
 client
-    .bind('a.topic#')
-    .subscribe((msg) => {
+    .subscribe('a.topic#', (msg) => {
         // queue with auto-generated name.
         // listens to `amq.topic`
     });
 
 client
     .queue('doSomething') // triggers assertQueue(),
-    .bind('exchange0', 'a.routing.key') // bindQueue() and possibly assertExchange()
-    .subscribe((msg) => {
+    .exchange('exchange0')
+    .subscribe('a.routing.key', (msg) => {
         // one can specify the queue name
         // and bind to a specific exchange as well.
-    });
-
-client
-    // .queue('processFile') // instead of being named here,
-    .bind('exchange0', 'a.routing.key')
-    .subscribe(function processFile(msg) {
-        // a queue can be named by the callback function?
     });
 
 
