@@ -3,6 +3,7 @@ jobs:
   lint-and-test:
     docker:
       - image: node:11.12-alpine
+      - image: rabbitmq:3.6-alpine
     steps:
       - checkout
 
