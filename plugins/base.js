@@ -15,4 +15,4 @@ module.exports = class Plugin {
         else throw new Error(`Plugin not implemented for scope '${scope}'`);
     }
 
-}
+};

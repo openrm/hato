@@ -35,7 +35,7 @@ module.exports = function(options = {}) {
 
             return retryable.bind(null, 0);
         }
-    }
+    };
 
     this.scopes = Object.keys(this.wrappers);
     this.wrap = (scope, context) => this.wrappers[scope](context).bind(this);
