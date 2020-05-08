@@ -25,12 +25,18 @@ class Recoverable extends EventEmitter {
                 cancel(new TimeoutError(timeout)), timeout);
 
             this._conn = create()
+                .then((conn) => {
+                    this.logger.debug('[AMQP:recover] Successfully recovered the connection.');
+                    return conn;
+                })
                 .catch((err) => {
                     this.logger.error('[AMQP:recover] Recovery failed.', err && err.message);
-                    clearTimeout(timer);
                     this.close(err);
                 })
-                .finally(() => clearTimeout(timer));
+                .then((conn) => {
+                    clearTimeout(timer);
+                    return conn;
+                });
         });
 
         helpers.events.forward(conn, this, 'blocked', 'unblocked', 'error');
