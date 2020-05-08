@@ -1,0 +1,46 @@
+const Plugin = require('./base');
+const { Scopes: { PUBLICATION, SUBSCRIPTION } } = require('../lib/constants');
+
+module.exports = class extends Plugin {
+    constructor(type) {
+        super();
+        this.type = type;
+        this.wrappers = {
+            [SUBSCRIPTION]({ logger }) {
+                return (consume) => (queue, fn) => {
+                    const handler = function(msg) {
+                        switch (type) {
+                            case 'json':
+                                try {
+                                    msg.content = JSON.parse(Buffer.from(msg.content).toString())
+                                } catch (e) {
+                                    logger.warn('[AMQP:encoding] JSON deserialization failed with an exception.',
+                                        e.message,
+                                        'Value:',
+                                        msg.content);
+                                }
+                            default:
+                        }
+                        return fn(msg);
+                    }
+                    return consume(queue, handler);
+                }
+            },
+            [PUBLICATION]({ logger }) {
+                return (publish) => (exchange, routingKey, content, options) => {
+                    switch (type) {
+                        case 'json':
+                            try {
+                                content = JSON.stringify(content)
+                            } catch (e) {
+                                logger.warn('[AMQP:encoding] JSON serialization failed with an exception.', e.message);
+                            }
+                        default:
+                    }
+                    content = Buffer.from(content);
+                    return publish(exchange, routingKey, content, options);
+                }
+            }
+        }
+    }
+}
