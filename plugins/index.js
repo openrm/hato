@@ -3,5 +3,6 @@ module.exports = {
     Retry: require('./retry'),
     Reconnection: require('./recover'),
     Duplex: require('./duplex'),
-    Encoding: require('./encoding')
+    Encoding: require('./encoding'),
+    RPC: require('./rpc')
 };

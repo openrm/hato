@@ -20,7 +20,8 @@
   },
   "homepage": "https://github.com/openrm/amqp-node#readme",
   "dependencies": {
-    "amqplib": "^0.5.5"
+    "amqplib": "^0.5.5",
+    "puid": "^1.0.7"
   },
   "devDependencies": {
     "eslint": "^6.8.0",
