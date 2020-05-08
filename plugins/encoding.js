@@ -7,7 +7,7 @@ module.exports = class extends Plugin {
         this.type = type;
         this.wrappers = {
             [SUBSCRIPTION]({ logger }) {
-                return (consume) => (queue, fn) => {
+                return (consume) => (queue, fn, options) => {
                     const handler = function(msg) {
                         switch (type) {
                         case 'json':
@@ -24,7 +24,7 @@ module.exports = class extends Plugin {
                         }
                         return fn(msg);
                     };
-                    return consume(queue, handler);
+                    return consume(queue, handler, options);
                 };
             },
             [PUBLICATION]({ logger }) {
