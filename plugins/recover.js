@@ -1,5 +1,6 @@
 const EventEmitter = require('events');
 const Plugin = require('./base');
+const helpers = require('./helpers');
 const { Scopes } = require('../lib/constants');
 const { TimeoutError } = require('../lib/errors');
 
@@ -32,14 +33,8 @@ class Recoverable extends EventEmitter {
                 .finally(() => clearTimeout(timer));
         });
 
-        this._bind(conn, 'blocked', 'unblocked', 'error');
+        helpers.events.forward(conn, this, 'blocked', 'unblocked', 'error');
         this._conn = Promise.resolve(conn);
-    }
-
-    _bind(conn, ...events) {
-        events.forEach(eventName => {
-            conn.on(eventName, this.emit.bind(this, eventName));
-        });
     }
 
     _unbind(conn, ...events) {

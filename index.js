@@ -5,7 +5,8 @@ const plugins = require('./plugins');
 const {
     Reconnection,
     GracefulShutdown,
-    Retry
+    Retry,
+    Duplex
 } = plugins;
 
 // TODO(naggingant) export named constructor instead
@@ -14,7 +15,8 @@ module.exports.connect = (url, options) => Client.start(url, {
     plugins: [
         new Retry(),
         new GracefulShutdown(),
-        new Reconnection()
+        new Reconnection(),
+        new Duplex()
     ],
     ...options
 });
