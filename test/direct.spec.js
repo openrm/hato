@@ -1,8 +1,10 @@
 const { Client } = require('../index');
 
 describe('direct', function() {
+    let client;
+    afterEach(() => client.close());
     it('should receive a basic publish', function(done) {
-        const client = new Client('amqp://guest:guest@127.0.0.1:5672', {
+        client = new Client('amqp://guest:guest@127.0.0.1:5672', {
             logger: console
         });
 
