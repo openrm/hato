@@ -1,5 +1,3 @@
-const TOKEN = Symbol();
-
 function forwardEvents(src, dst, ...events) {
     events.forEach((name) => src.on(name, dst.emit.bind(dst)));
     return dst;
@@ -32,4 +30,4 @@ module.exports = {
         });
         return dst;
     }
-}
+};
