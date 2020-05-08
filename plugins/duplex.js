@@ -6,7 +6,7 @@ const { Scopes } = require('../lib/constants');
 const Modes = {
     PUBLICATION: 'publication',
     SUBSCRIPTION: 'subscription'
-}
+};
 
 class DuplexConnection extends EventEmitter {
     constructor(connect) {
@@ -98,14 +98,14 @@ module.exports = class extends Plugin {
 
         this.wrappers = {
 
-            [Scopes.CONNECTION](context) {
+            [Scopes.CONNECTION]() {
                 return (connect) => {
                     const duplex = new DuplexConnection(connect);
                     return duplex.connect.bind(duplex);
-                }
+                };
             }
 
-        }
+        };
     }
 
-}
+};

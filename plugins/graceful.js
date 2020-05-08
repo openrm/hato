@@ -30,9 +30,9 @@ module.exports = class someClass extends Plugin {
 
                             return conn;
                         });
-                }
+                };
             }
-        }
+        };
     }
 
-}
+};

@@ -1,0 +1,52 @@
+version: 2
+jobs:
+  lint-and-test:
+    docker:
+      - image: node:11.12-alpine
+      - image: rabbitmq:3.6-alpine
+    steps:
+      - checkout
+
+      - restore_cache:
+          key: deps-{{ checksum "package-lock.json" }}
+
+      - run: npm install
+
+      - save_cache:
+          key: deps-{{ checksum "package-lock.json" }}
+          paths:
+            - "node_modules/"
+
+      - run: apk add make --no-cache
+      - run: make lint
+      - run: make cover
+
+      - persist_to_workspace:
+          root: coverage
+          paths:
+            - lcov.info
+
+  upload_coverage:
+    docker:
+      - image: node:11.12-alpine
+    steps:
+      - run: apk add --no-cache git ca-certificates curl
+
+      - attach_workspace:
+          at: /tmp/coverage
+
+      - checkout
+
+      - run: curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > reporter
+      - run: chmod +x reporter
+      - run: ./reporter format-coverage -t lcov /tmp/coverage/lcov.info -o codeclimate.json
+      - run: ./reporter upload-coverage -i codeclimate.json
+
+workflows:
+  version: 2
+  lint-and-test:
+    jobs:
+    - lint-and-test
+    - upload_coverage:
+        requires:
+          - lint-and-test
