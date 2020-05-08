@@ -19,8 +19,14 @@ module.exports = class someClass extends Plugin {
                                 logger.debug(`[AMQP:graceful] Received ${sig}, closing connection...`);
                                 return conn.close().catch(logger.error);
                             };
+
                             process.once('SIGINT', close);
                             process.once('SIGTERM', close);
+
+                            conn.on('close', () => {
+                                process.removeListener('SIGINT', close);
+                                process.removeListener('SIGTERM', close);
+                            });
 
                             return conn;
                         });
