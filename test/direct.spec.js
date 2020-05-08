@@ -1,17 +1,20 @@
-const { Client } = require('../index');
+const { Client } = require('..');
+const { Encoding } = require('../plugins');
 
 describe('direct', function() {
     let client;
     afterEach(() => client.close());
     it('should receive a basic publish', function(done) {
         client = new Client('amqp://guest:guest@127.0.0.1:5672', {
-            logger: console
+            plugins: [
+                new Encoding('json')
+            ]
         });
 
         client.start().catch(done);
 
         client.subscribe('a.routing.key', (msg) => {
-            const content = JSON.parse(Buffer.from(msg.content).toString());
+            const content = msg.content;
             msg.ack();
 
             if (content[1] === 'message') {
@@ -22,7 +25,7 @@ describe('direct', function() {
         })
         .catch(done);
 
-        client.publish('a.routing.key', Buffer.from(JSON.stringify({ 1: 'message' }))).catch(done);
+        client.publish('a.routing.key', { 1: 'message' }).catch(done);
 
     });
 });
