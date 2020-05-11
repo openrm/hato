@@ -3,11 +3,10 @@ const Plugin = require('./base');
 const { Scopes } = require('../lib/constants');
 
 const Puid = require('puid');
-const uid = new Puid();
 
 module.exports = class extends Plugin {
 
-    constructor() {
+    constructor({ uid = new Puid() } = {}) {
         super();
 
         this.wrappers = {
