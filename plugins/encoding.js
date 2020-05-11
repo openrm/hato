@@ -28,7 +28,7 @@ module.exports = class extends Plugin {
                 };
             },
             [PUBLICATION]({ logger }) {
-                return (publish) => (exchange, routingKey, content, options) => {
+                return (publish) => (exchange, routingKey, content, options, callback) => {
                     switch (type) {
                     case 'json':
                         try {
@@ -40,7 +40,7 @@ module.exports = class extends Plugin {
                     default:
                     }
                     content = Buffer.from(content);
-                    return publish(exchange, routingKey, content, options);
+                    return publish(exchange, routingKey, content, options, callback);
                 };
             }
         };
