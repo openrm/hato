@@ -80,7 +80,6 @@ module.exports = class extends Plugin {
                             const delay = (count + 1) * min;
                             const fallback = count >= retries ?
                                 msg.nack.bind(null, false, false) :
-                                // (err) => { msg.nack(false, false); } :
                                 retry.bind(this, msg, delay);
                             return Promise
                                 .resolve()
