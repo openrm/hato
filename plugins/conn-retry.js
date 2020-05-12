@@ -12,17 +12,17 @@ module.exports = function(options = {}) {
     this.wrappers = {
         [CONNECTION]: ({ logger, cancelled }) => (connect) => {
             cancelled.then((reason) => {
-                logger.warn('[AMQP:retry] Retries will be cancelled. Reason:', reason && reason.message);
+                logger.warn('[AMQP:conn-retry] Retries will be cancelled. Reason:', reason && reason.message);
             });
 
             const retryable = (c, ...args) => {
-                if (0 < c) logger.debug('[AMQP:retry] Retrying to connect...');
+                if (0 < c) logger.debug('[AMQP:conn-retry] Retrying to connect...');
                 return connect(...args)
                     .catch((err) => {
                         if (c + 1 >= retries) throw err;
 
                         const wait = Math.min(max, Math.pow(factor, c) * min);
-                        logger.warn(`[AMQP:retry] Connection failed. Retrying in ${wait}ms...`, err.message);
+                        logger.warn(`[AMQP:conn-retry] Connection failed. Retrying in ${wait}ms...`, err.message);
 
                         return new Promise((resolve, reject) => {
                             const id = setTimeout(() =>

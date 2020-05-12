@@ -5,7 +5,7 @@ const plugins = require('./plugins');
 const {
     Reconnection,
     GracefulShutdown,
-    Retry,
+    ConnectionRetry,
     Duplex,
     Encoding
 } = plugins;
@@ -14,7 +14,7 @@ const {
 module.exports.connect = (url, options) => Client.start(url, {
     logger: console,
     plugins: [
-        new Retry(),
+        new ConnectionRetry(),
         new GracefulShutdown(),
         new Reconnection(),
         new Duplex(),
