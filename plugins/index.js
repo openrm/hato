@@ -4,5 +4,6 @@ module.exports = {
     Reconnection: require('./recover'),
     Duplex: require('./duplex'),
     Encoding: require('./encoding'),
-    RPC: require('./rpc')
+    RPC: require('./rpc'),
+    Confirm: require('./confirm')
 };
