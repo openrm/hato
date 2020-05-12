@@ -27,7 +27,7 @@ function retryCount({ properties: { headers } }) {
         .reduce((c, { count }) => c + count, 0);
 }
 
-function retry(msg, delay = 500, err) {
+function retry(msg, delay = 500) {
     const { fields: { exchange, routingKey } } = msg;
     const { name: ex } = defaults.exchange();
     return this._asserted()
@@ -39,7 +39,7 @@ function retry(msg, delay = 500, err) {
                     .bindQueue(queue, ex, '', {
                         'x-match': 'all',
                         'delay': delay.toString()
-                    }))
+                    }));
         })
         .then(() => {
             const options = {
@@ -59,7 +59,6 @@ module.exports = class extends Plugin {
 
     constructor({ retries = 5, min = 500 } = {}) {
         super();
-        const _this = this;
         this.wrappers = {
             [CHANNEL]() {
                 return (create) => () => {
@@ -73,7 +72,7 @@ module.exports = class extends Plugin {
                         .then(() => _ch);
                 };
             },
-            [API]({ logger }) {
+            [API]() {
                 return (constructor) => class extends constructor {
                     consume(queue, fn, options) {
                         const handler = (msg) => {
@@ -86,13 +85,13 @@ module.exports = class extends Plugin {
                             return Promise
                                 .resolve()
                                 .then(() => fn(msg))
-                                .catch(fallback)
+                                .catch(fallback);
                         };
                         return super.consume(queue, handler, options);
                     }
-                }
+                };
             }
         };
     }
 
-}
+};

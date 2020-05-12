@@ -1,4 +1,4 @@
-const { Client, errors: { UnroutableMessageError } } = require('..');
+const { Client } = require('..');
 const Retry = require('./retry');
 
 describe('retry plugin', () => {
@@ -18,7 +18,7 @@ describe('retry plugin', () => {
     it('should retry until it reaches the limit', (done) => {
         let failed = 0;
         client
-            .subscribe('it.fails', (msg) => {
+            .subscribe('it.fails', () => {
                 if (failed++ < retries) throw 'fail!';
                 else if (failed > 0) done();
             })
