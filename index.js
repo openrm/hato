@@ -7,7 +7,8 @@ const {
     GracefulShutdown,
     ConnectionRetry,
     Duplex,
-    Encoding
+    Encoding,
+    Retry
 } = plugins;
 
 // TODO(naggingant) export named constructor instead
@@ -18,7 +19,8 @@ module.exports.connect = (url, options) => Client.start(url, {
         new GracefulShutdown(),
         new Reconnection(),
         new Duplex(),
-        new Encoding('json')
+        new Encoding('json'),
+        new Retry()
     ],
     ...options
 });
