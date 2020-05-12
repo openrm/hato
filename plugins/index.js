@@ -5,5 +5,6 @@ module.exports = {
     Duplex: require('./duplex'),
     Encoding: require('./encoding'),
     RPC: require('./rpc'),
-    Confirm: require('./confirm')
+    Confirm: require('./confirm'),
+    Retry: require('./retry')
 };
