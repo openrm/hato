@@ -14,7 +14,8 @@ module.exports = class extends Plugin {
                             try {
                                 msg.content = JSON.parse(Buffer.from(msg.content).toString());
                             } catch (e) {
-                                logger.warn('[AMQP:encoding] JSON deserialization failed with an exception.',
+                                logger.warn(
+                                    '[AMQP:encoding] JSON deserialization failed with an exception.',
                                     e.message,
                                     'Value:',
                                     msg.content);
@@ -34,7 +35,9 @@ module.exports = class extends Plugin {
                         try {
                             content = JSON.stringify(content);
                         } catch (e) {
-                            logger.warn('[AMQP:encoding] JSON serialization failed with an exception.', e.message);
+                            logger.warn(
+                                '[AMQP:encoding] JSON serialization failed with an exception.',
+                                e.message);
                         }
                         break;
                     default:
