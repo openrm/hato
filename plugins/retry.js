@@ -38,7 +38,7 @@ function retry(msg, delay = 500) {
                 .then(({ queue }) => ch
                     .bindQueue(queue, ex, '', {
                         'x-match': 'all',
-                        'delay': delay.toString()
+                        delay
                     }));
         })
         .then(() => {
@@ -46,7 +46,7 @@ function retry(msg, delay = 500) {
                 ...msg.properties,
                 headers: {
                     ...msg.properties.headers,
-                    'delay': delay.toString()
+                    delay
                 }
             };
             return this
