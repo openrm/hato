@@ -1,5 +1,6 @@
 const { EventEmitter } = require('events');
 const Plugin = require('./base');
+const { promise } = require('./helpers');
 const { Scopes } = require('../lib/constants');
 const { TimeoutError } = require('../lib/errors');
 
@@ -39,9 +40,11 @@ module.exports = class extends Plugin {
                             let timer, listener;
 
                             if (timeout > 0) {
-                                timer = setTimeout(
-                                    () => reject(new TimeoutError(timeout)),
-                                    timeout);
+                                const abort = () => {
+                                    reject(new TimeoutError(timeout));
+                                    this._resp.removeListener(correlationId, listener);
+                                };
+                                timer = setTimeout(abort, timeout);
                             }
 
                             this._resp.on(correlationId, listener = (msg) => {
@@ -63,12 +66,13 @@ module.exports = class extends Plugin {
                                 correlationId
                             } = msg.properties;
 
-                            const res = fn(msg);
+                            fn = fn.bind(null, msg);
 
                             // not a rpc
-                            if (!replyTo) return res;
+                            if (!replyTo) return fn();
 
-                            return Promise.resolve(res)
+                            return promise
+                                .wrap(fn)
                                 .then((res) => {
                                     return this.publish(replyTo, res, { correlationId });
                                 });

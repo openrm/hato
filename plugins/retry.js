@@ -1,4 +1,5 @@
 const Plugin = require('./base');
+const { promise } = require('./helpers');
 const { Scopes: { API, CHANNEL } } = require('../lib/constants');
 
 const defaults = {
@@ -32,7 +33,8 @@ function retry(msg, delay = 500) {
     const { name: ex } = defaults.exchange();
     return this._asserted()
         .then((ch) => {
-            const { name, options } = defaults.queue({ delay, exchange });
+            const { name, options } =
+                defaults.queue({ delay, exchange });
             return ch
                 .assertQueue(name, options)
                 .then(({ queue }) => ch
@@ -66,7 +68,8 @@ module.exports = class extends Plugin {
                     return create()
                         .then((ch) => _ch = ch)
                         .then((ch) => {
-                            const { name, type, options } = defaults.exchange();
+                            const { name, type, options } =
+                                defaults.exchange();
                             return ch.assertExchange(name, type, options);
                         })
                         .then(() => _ch);
@@ -81,9 +84,8 @@ module.exports = class extends Plugin {
                             const fallback = count >= retries ?
                                 msg.nack.bind(null, false, false) :
                                 retry.bind(this, msg, delay);
-                            return Promise
-                                .resolve()
-                                .then(() => fn(msg))
+                            return promise
+                                .wrap(fn.bind(null, msg))
                                 .catch(fallback);
                         };
                         return super.consume(queue, handler, options);
