@@ -24,7 +24,7 @@ describe('retry plugin', () => {
                 }
                 if (failed++ < retries) throw 'fail!';
                 else if (failed > 0) done();
-            })
+            }, { retry: { strategy: 'linear' } })
             .then(() => client
                 .publish('it.fails', Buffer.from('hello')))
             .catch(done);

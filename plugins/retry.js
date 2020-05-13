@@ -13,7 +13,7 @@ const defaults = {
         options: {
             durable: true,
             deadLetterExchange: exchange,
-            expires: 24 * 60 * 60 * 1e3,
+            expires: 60 * 60 * 1e3,
             messageTtl: delay
         }
     })
@@ -22,7 +22,7 @@ const defaults = {
 const backoff = ({ initial }) => ({
     constant: () => initial,
     linear: (c) => initial * (c + 1),
-    exponential: (c, { factor = 2 } = {}) => initial * Math.pow(factor, c)
+    exponential: (c, { base = 2 } = {}) => initial * Math.pow(base, c)
 });
 
 function retryCount({ properties: { headers } }) {
@@ -65,9 +65,9 @@ function retry(msg, delay = 500) {
 
 module.exports = class extends Plugin {
 
-    constructor({ retries = 5, min = 500, strategy = 'exponential' } = {}) {
+    constructor(globalOptions = {}) {
         super();
-        const delayFn = backoff({ initial: min })[strategy];
+
         this.wrappers = {
             [CHANNEL]() {
                 return (create) => () => {
@@ -84,7 +84,22 @@ module.exports = class extends Plugin {
             },
             [API]() {
                 return (constructor) => class extends constructor {
-                    consume(queue, fn, options) {
+                    consume(queue, fn, { retries, retry: localOptions, ...options }) {
+                        retries = retries >= 0 ? retries : globalOptions.retries;
+
+                        const {
+                            min = 500,
+                            max = Infinity,
+                            strategy = 'exponential',
+                            base = 2
+                        } = { ...globalOptions, ...localOptions };
+
+                        const _delayFn = backoff({ initial: min })[strategy];
+                        const delayFn = (...args) => {
+                            const d = _delayFn(...args);
+                            return Math.min(max, Math.floor(d));
+                        };
+
                         const handler = (msg) => {
                             const count = retryCount(msg);
                             const delay = delayFn(count);
@@ -95,6 +110,7 @@ module.exports = class extends Plugin {
                                 .wrap(fn.bind(null, msg))
                                 .catch(fallback);
                         };
+
                         return super.consume(queue, handler, options);
                     }
                 };
