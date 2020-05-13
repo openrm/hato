@@ -22,6 +22,8 @@ module.exports = class extends Plugin {
     constructor({ uid = new Puid(), timeout = 0 } = {}) {
         super();
 
+        const globalTimeout = timeout;
+
         this.wrappers = {
 
             [Scopes.CHANNEL]({ logger }) {
@@ -63,7 +65,7 @@ module.exports = class extends Plugin {
                         this._resp = new EventEmitter();
                     }
 
-                    rpc(routingKey, msg, options = {}) {
+                    rpc(routingKey, msg, { timeout = globalTimeout, ...options } = {}) {
                         const correlationId = uid.generate();
                         const replyTo = 'amq.rabbitmq.reply-to';
 

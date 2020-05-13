@@ -9,7 +9,7 @@ describe('retry plugin', () => {
     beforeEach(() => {
         return new Client('amqp://guest:guest@127.0.0.1:5672', {
             plugins: [
-                new Retry({ retries: 2, min: 10 }),
+                new Retry({ retries, min: 10 }),
                 new RPC()
             ]
         })
@@ -39,8 +39,7 @@ describe('retry plugin', () => {
             .subscribe('rpc.1', () => {
                 throw 'error!';
             })
-            .then(() => client
-                .rpc('rpc.1', Buffer.from('hello')))
+            .then(() => client.rpc('rpc.1', Buffer.from('hello')))
             .then(() => {
                 done(new Error('RPC call should fail'));
             })

@@ -124,7 +124,7 @@ module.exports = class extends Plugin {
                         .wrap(() => fn(msg))
                         .catch((err) => {
                             fallback(err);
-                            return new Error(err);
+                            return err instanceof Error ? err : new Error(err);
                         });
                 };
 
