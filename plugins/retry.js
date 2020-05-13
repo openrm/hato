@@ -56,13 +56,13 @@ function assertDelayQueue(delay, exchange) {
 function retry(msg, delay = 500) {
     const { fields: { exchange, routingKey } } = msg;
     const { name: delayExchange } = defaults.exchange();
+    const options = {
+        ...msg.properties,
+        headers: inject(delay, exchange)(msg.properties.headers)
+    };
     return this._asserted()
         .then(assertDelayQueue(delay, exchange))
         .then(() => {
-            const options = {
-                ...msg.properties,
-                headers: inject(delay, exchange)(msg.properties.headers)
-            };
             return this
                 .exchange(delayExchange)
                 .publish(routingKey, msg.content, options);
@@ -118,10 +118,10 @@ module.exports = class extends Plugin {
                     const count = retryCount(msg);
                     const delay = delayFn(count);
                     const fallback = count >= retries ?
-                        msg.nack.bind(null, false, false) :
+                        () => msg.nack(false, false) :
                         retry.bind(this, msg, delay);
                     return promise
-                        .wrap(fn.bind(null, msg))
+                        .wrap(() => fn(msg))
                         .catch(fallback);
                 };
 
