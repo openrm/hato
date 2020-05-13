@@ -91,7 +91,7 @@ module.exports = class extends Plugin {
                             min = 500,
                             max = Infinity,
                             strategy = 'exponential',
-                            base = 2
+                            ...strategyOptions
                         } = { ...globalOptions, ...localOptions };
 
                         const _delayFn = backoff({ initial: min })[strategy];
@@ -102,7 +102,7 @@ module.exports = class extends Plugin {
 
                         const handler = (msg) => {
                             const count = retryCount(msg);
-                            const delay = delayFn(count);
+                            const delay = delayFn(count, strategyOptions);
                             const fallback = count >= retries ?
                                 msg.nack.bind(null, false, false) :
                                 retry.bind(this, msg, delay);
