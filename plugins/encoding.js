@@ -34,6 +34,7 @@ module.exports = class extends Plugin {
                     case 'json':
                         try {
                             content = JSON.stringify(content);
+                            options.contentType = 'application/json';
                         } catch (e) {
                             logger.warn(
                                 '[AMQP:encoding] JSON serialization failed with an exception.',
