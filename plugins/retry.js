@@ -34,21 +34,25 @@ function retryCount({ properties: { headers } }) {
         .reduce((c, { count }) => c + count, 0);
 }
 
+function assertDelayQueue(delay, exchange) {
+    const { name, options } = defaults.queue({ delay, exchange });
+    const { name: ex } = defaults.exchange();
+    return (ch) => {
+        return ch
+            .assertQueue(name, options)
+            .then(({ queue }) => ch
+                .bindQueue(queue, ex, '', {
+                    'x-match': 'all',
+                    delay
+                }));
+    };
+}
+
 function retry(msg, delay = 500) {
     const { fields: { exchange, routingKey } } = msg;
     const { name: ex } = defaults.exchange();
     return this._asserted()
-        .then((ch) => {
-            const { name, options } =
-                defaults.queue({ delay, exchange });
-            return ch
-                .assertQueue(name, options)
-                .then(({ queue }) => ch
-                    .bindQueue(queue, ex, '', {
-                        'x-match': 'all',
-                        delay
-                    }));
-        })
+        .then(assertDelayQueue(delay, exchange))
         .then(() => {
             const options = {
                 ...msg.properties,
