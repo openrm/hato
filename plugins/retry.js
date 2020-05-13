@@ -63,57 +63,63 @@ function retry(msg, delay = 500) {
         });
 }
 
+function createDelayFunc(options) {
+    const {
+        min = 500,
+        max = Infinity,
+        strategy = 'exponential',
+        ...strategyOptions
+    } = options;
+
+    const _delayFn = backoff({ initial: min })[strategy];
+    return (count) => {
+        const d = _delayFn(count, strategyOptions);
+        return Math.min(max, Math.floor(d));
+    };
+}
+
 module.exports = class extends Plugin {
 
-    constructor(globalOptions = {}) {
+    constructor(options = {}) {
         super();
+
+        this.options = options;
 
         this.wrappers = {
             [CHANNEL]() {
-                return (create) => () => {
-                    let _ch;
-                    return create()
-                        .then((ch) => _ch = ch)
+                return (create) => () =>
+                    create()
                         .then((ch) => {
                             const { name, type, options } =
                                 defaults.exchange();
-                            return ch.assertExchange(name, type, options);
-                        })
-                        .then(() => _ch);
-                };
+                            return ch.assertExchange(name, type, options)
+                                .then(() => ch);
+                        });
             },
-            [API]() {
-                return (constructor) => class extends constructor {
-                    consume(queue, fn, { retries, retry: localOptions, ...options }) {
-                        retries = retries >= 0 ? retries : globalOptions.retries;
+            [API]: () => this.handlePubsub.bind(this)
+        };
+    }
 
-                        const {
-                            min = 500,
-                            max = Infinity,
-                            strategy = 'exponential',
-                            ...strategyOptions
-                        } = { ...globalOptions, ...localOptions };
+    handlePubsub(constructor) {
+        const plugin = this;
+        return class extends constructor {
+            consume(queue, fn, { retries, retry: localOptions, ...options }) {
+                retries = retries >= 0 ? retries : plugin.options.retries;
 
-                        const _delayFn = backoff({ initial: min })[strategy];
-                        const delayFn = (...args) => {
-                            const d = _delayFn(...args);
-                            return Math.min(max, Math.floor(d));
-                        };
+                const delayFn = createDelayFunc({ ...plugin.options, ...localOptions });
 
-                        const handler = (msg) => {
-                            const count = retryCount(msg);
-                            const delay = delayFn(count, strategyOptions);
-                            const fallback = count >= retries ?
-                                msg.nack.bind(null, false, false) :
-                                retry.bind(this, msg, delay);
-                            return promise
-                                .wrap(fn.bind(null, msg))
-                                .catch(fallback);
-                        };
-
-                        return super.consume(queue, handler, options);
-                    }
+                const handler = (msg) => {
+                    const count = retryCount(msg);
+                    const delay = delayFn(count);
+                    const fallback = count >= retries ?
+                        msg.nack.bind(null, false, false) :
+                        retry.bind(this, msg, delay);
+                    return promise
+                        .wrap(fn.bind(null, msg))
+                        .catch(fallback);
                 };
+
+                return super.consume(queue, handler, options);
             }
         };
     }
