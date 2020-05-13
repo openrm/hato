@@ -6,12 +6,52 @@ const { TimeoutError } = require('../lib/errors');
 
 const Puid = require('puid');
 
+const parse = (msg) => {
+    return new Promise((resolve, reject) => {
+        const { properties: { headers } } = msg;
+        if (headers['x-error']) {
+            const deserialized = JSON.parse(msg.content.toString());
+            reject(new Error(deserialized));
+        }
+        else resolve(msg);
+    });
+};
+
 module.exports = class extends Plugin {
 
     constructor({ uid = new Puid(), timeout = 0 } = {}) {
         super();
 
         this.wrappers = {
+
+            [Scopes.CHANNEL]({ logger }) {
+                return (create) => () => {
+                    return create().then((ch) => {
+                        const nack = ch.nack;
+                        ch.nack = function(msg, multiple, requeue, err) {
+                            nack.apply(ch, arguments);
+                            if (requeue || !err) return;
+                            const serialized = Buffer.from(JSON.stringify(err));
+                            const { replyTo, ...properties } = msg.properties;
+                            const options = {
+                                ...properties,
+                                headers: {
+                                    ...properties.headers,
+                                    'x-error': true
+                                }
+                            };
+                            try {
+                                ch.publish('', replyTo, serialized, options);
+                            } catch (err) {
+                                logger.error(
+                                    '[AMQP:rpc] Failed to report the error back to client.',
+                                    err);
+                            }
+                        };
+                        return ch;
+                    });
+                };
+            },
 
             [Scopes.API]() {
 
@@ -49,7 +89,7 @@ module.exports = class extends Plugin {
 
                             this._resp.on(correlationId, listener = (msg) => {
                                 timer && clearTimeout(timer);
-                                resolve(msg);
+                                parse(msg).then(resolve, reject);
                                 this._resp.removeListener(correlationId, listener);
                             });
 
@@ -66,14 +106,13 @@ module.exports = class extends Plugin {
                                 correlationId
                             } = msg.properties;
 
-                            fn = fn.bind(null, msg);
-
                             // not a rpc
-                            if (!replyTo) return fn();
+                            if (!replyTo) return fn(msg);
 
                             return promise
-                                .wrap(fn)
+                                .wrap(() => fn(msg))
                                 .then((res) => {
+                                    if (res instanceof Error) return res;
                                     return this.publish(replyTo, res, { correlationId });
                                 });
                         };

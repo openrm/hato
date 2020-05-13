@@ -66,7 +66,7 @@ function retry(msg, delay = 500) {
             return this
                 .exchange(delayExchange)
                 .publish(routingKey, msg.content, options);
-        })
+        });
 }
 
 function createDelayFunc(options) {
@@ -107,22 +107,25 @@ module.exports = class extends Plugin {
     }
 
     handlePubsub(constructor) {
-        const plugin = this;
+        const globalOptions = this.options;
         return class extends constructor {
             consume(queue, fn, { retries, retry: localOptions, ...options } = {}) {
-                retries = retries >= 0 ? retries : plugin.options.retries;
+                retries = retries >= 0 ? retries : globalOptions.retries;
 
-                const delayFn = createDelayFunc({ ...plugin.options, ...localOptions });
+                const delayFn = createDelayFunc({ ...globalOptions, ...localOptions });
 
                 const handler = (msg) => {
                     const count = retryCount(msg);
                     const delay = delayFn(count);
                     const fallback = count >= retries ?
-                        () => msg.nack(false, false) :
+                        msg.nack.bind(msg, false, false) :
                         retry.bind(this, msg, delay);
                     return promise
                         .wrap(() => fn(msg))
-                        .catch(fallback);
+                        .catch((err) => {
+                            fallback(err);
+                            return new Error(err);
+                        });
                 };
 
                 return super.consume(queue, handler, options);
