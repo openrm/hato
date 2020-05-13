@@ -1,5 +1,4 @@
 const { Client, errors: { TimeoutError } } = require('..');
-const Retry = require('./retry');
 const RPC = require('./rpc');
 
 describe('rpc plugin', () => {
@@ -26,7 +25,7 @@ describe('rpc plugin', () => {
             .then(() => done(new Error('RPC call should fail')))
             .catch((err) => {
                 if (err instanceof TimeoutError) done();
-                else done(new Error('Returned error does not match'));
+                else done(err);
             });
     });
 
