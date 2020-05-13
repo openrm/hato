@@ -19,6 +19,12 @@ const defaults = {
     })
 };
 
+const backoff = ({ initial }) => ({
+    constant: () => initial,
+    linear: (c) => initial * (c + 1),
+    exponential: (c, { factor = 2 } = {}) => initial * Math.pow(factor, c)
+});
+
 function retryCount({ properties: { headers } }) {
     const deaths = headers['x-death'] || [];
     const { name } = defaults.exchange();
@@ -59,8 +65,9 @@ function retry(msg, delay = 500) {
 
 module.exports = class extends Plugin {
 
-    constructor({ retries = 5, min = 500 } = {}) {
+    constructor({ retries = 5, min = 500, strategy = 'exponential' } = {}) {
         super();
+        const delayFn = backoff({ initial: min })[strategy];
         this.wrappers = {
             [CHANNEL]() {
                 return (create) => () => {
@@ -80,7 +87,7 @@ module.exports = class extends Plugin {
                     consume(queue, fn, options) {
                         const handler = (msg) => {
                             const count = retryCount(msg);
-                            const delay = (count + 1) * min;
+                            const delay = delayFn(count);
                             const fallback = count >= retries ?
                                 msg.nack.bind(null, false, false) :
                                 retry.bind(this, msg, delay);
