@@ -43,14 +43,14 @@ function assertDelayQueue(delay, exchange) {
             .then(({ queue }) => ch
                 .bindQueue(queue, ex, '', {
                     'x-match': 'all',
-                    delay
+                    'message-delay': delay
                 }));
     };
 }
 
 function retry(msg, delay = 500) {
     const { fields: { exchange, routingKey } } = msg;
-    const { name: ex } = defaults.exchange();
+    const { name: delayExchange } = defaults.exchange();
     return this._asserted()
         .then(assertDelayQueue(delay, exchange))
         .then(() => {
@@ -58,11 +58,11 @@ function retry(msg, delay = 500) {
                 ...msg.properties,
                 headers: {
                     ...msg.properties.headers,
-                    delay
+                    'message-delay': delay
                 }
             };
             return this
-                .exchange(ex)
+                .exchange(delayExchange)
                 .publish(routingKey, msg.content, options);
         });
 }
