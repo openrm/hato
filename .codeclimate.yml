@@ -1,0 +1,4 @@
+exclude_patterns:
+  - "test/"
+  - "**/*.spec.js"
+  - "**/node_modules/"
