@@ -25,6 +25,12 @@ const backoff = ({ initial }) => ({
     exponential: (c, { base = 2 } = {}) => initial * Math.pow(base, c)
 });
 
+const inject = (delay, exchange) => (headers) => ({
+    ...headers,
+    'retry-destination': exchange,
+    'retry-delay': delay
+});
+
 function retryCount({ properties: { headers } }) {
     const deaths = headers['x-death'] || [];
     const { name } = defaults.exchange();
@@ -41,10 +47,9 @@ function assertDelayQueue(delay, exchange) {
         return ch
             .assertQueue(name, options)
             .then(({ queue }) => ch
-                .bindQueue(queue, ex, '', {
-                    'x-match': 'all',
-                    'message-delay': delay
-                }));
+                .bindQueue(queue, ex, '', inject(delay, exchange)({
+                    'x-match': 'all'
+                })));
     };
 }
 
@@ -56,15 +61,12 @@ function retry(msg, delay = 500) {
         .then(() => {
             const options = {
                 ...msg.properties,
-                headers: {
-                    ...msg.properties.headers,
-                    'message-delay': delay
-                }
+                headers: inject(delay, exchange)(msg.properties.headers)
             };
             return this
                 .exchange(delayExchange)
                 .publish(routingKey, msg.content, options);
-        });
+        })
 }
 
 function createDelayFunc(options) {
@@ -107,7 +109,7 @@ module.exports = class extends Plugin {
     handlePubsub(constructor) {
         const plugin = this;
         return class extends constructor {
-            consume(queue, fn, { retries, retry: localOptions, ...options }) {
+            consume(queue, fn, { retries, retry: localOptions, ...options } = {}) {
                 retries = retries >= 0 ? retries : plugin.options.retries;
 
                 const delayFn = createDelayFunc({ ...plugin.options, ...localOptions });
