@@ -31,7 +31,9 @@ function retry(msg, delay = 500) {
         .then(() => {
             return this
                 .exchange(delayExchange)
-                .publish(routingKey, msg.content, options);
+                .publish(routingKey, msg.content, options)
+                .then(msg.ack);
+            // TODO(naggingant) last ack fails on queues with no-ack set true
         });
 }
 
