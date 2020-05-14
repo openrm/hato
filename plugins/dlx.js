@@ -1,5 +1,5 @@
 const Plugin = require('./base');
-const { Scopes: { API, CHANNEL } } = require('../lib/constants');
+const { Scopes: { CHANNEL } } = require('../lib/constants');
 
 const associateDlx = (ch, name) => {
     const _assert = ch.assertQueue;
