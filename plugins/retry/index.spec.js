@@ -1,6 +1,6 @@
-const { Client } = require('..');
-const Retry = require('./retry');
-const RPC = require('./rpc');
+const { Client } = require('../..');
+const Retry = require('.');
+const RPC = require('../rpc');
 
 describe('retry plugin', () => {
     let client;

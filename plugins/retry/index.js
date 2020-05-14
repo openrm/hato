@@ -1,53 +1,19 @@
-const Plugin = require('./base');
-const { promise } = require('./helpers');
-const { Scopes: { API, CHANNEL } } = require('../lib/constants');
+const Plugin = require('../base');
+const { promise } = require('../helpers');
+const { Scopes: { API, CHANNEL } } = require('../../lib/constants');
 
-const defaults = {
-    exchange: () => ({
-        name: 'delay',
-        type: 'headers',
-        options: { durable: true }
-    }),
-    queue: ({ delay = 500, exchange = '' } = {}) => ({
-        name: `delay.${delay}.${exchange}`,
-        options: {
-            durable: true,
-            deadLetterExchange: exchange,
-            expires: 60 * 60 * 1e3,
-            messageTtl: delay
-        }
-    })
-};
-
-const backoff = ({ initial }) => ({
-    constant: () => initial,
-    linear: (c) => initial * (c + 1),
-    exponential: (c, { base = 2 } = {}) => initial * Math.pow(base, c)
-});
-
-const inject = (delay, exchange) => (headers) => ({
-    ...headers,
-    'retry-destination': exchange,
-    'retry-delay': delay
-});
-
-function retryCount({ properties: { headers } }) {
-    const deaths = headers['x-death'] || [];
-    const { name } = defaults.exchange();
-    return deaths
-        .filter(({ exchange, reason }) =>
-            exchange === name && reason === 'expired')
-        .reduce((c, { count }) => c + count, 0);
-}
+const backoff = require('./backoff');
+const context = require('./context');
+const configs = require('./configs');
 
 function assertDelayQueue(delay, exchange) {
-    const { name, options } = defaults.queue({ delay, exchange });
-    const { name: ex } = defaults.exchange();
+    const { name, options } = configs.queue({ delay, exchange });
+    const { name: ex } = configs.exchange();
     return (ch) => {
         return ch
             .assertQueue(name, options)
             .then(({ queue }) => ch
-                .bindQueue(queue, ex, '', inject(delay, exchange)({
+                .bindQueue(queue, ex, '', context.inject(delay, exchange)({
                     'x-match': 'all'
                 })));
     };
@@ -55,10 +21,10 @@ function assertDelayQueue(delay, exchange) {
 
 function retry(msg, delay = 500) {
     const { fields: { exchange, routingKey } } = msg;
-    const { name: delayExchange } = defaults.exchange();
+    const { name: delayExchange } = configs.exchange();
     const options = {
         ...msg.properties,
-        headers: inject(delay, exchange)(msg.properties.headers)
+        headers: context.inject(delay, exchange)(msg.properties.headers)
     };
     return this._asserted()
         .then(assertDelayQueue(delay, exchange))
@@ -67,21 +33,6 @@ function retry(msg, delay = 500) {
                 .exchange(delayExchange)
                 .publish(routingKey, msg.content, options);
         });
-}
-
-function createDelayFunc(options) {
-    const {
-        min = 500,
-        max = Infinity,
-        strategy = 'exponential',
-        ...strategyOptions
-    } = options;
-
-    const _delayFn = backoff({ initial: min })[strategy];
-    return (count) => {
-        const d = _delayFn(count, strategyOptions);
-        return Math.min(max, Math.floor(d));
-    };
 }
 
 module.exports = class extends Plugin {
@@ -97,7 +48,7 @@ module.exports = class extends Plugin {
                     create()
                         .then((ch) => {
                             const { name, type, options } =
-                                defaults.exchange();
+                                configs.exchange();
                             return ch.assertExchange(name, type, options)
                                 .then(() => ch);
                         });
@@ -112,11 +63,11 @@ module.exports = class extends Plugin {
             consume(queue, fn, { retries, retry: localOptions, ...options } = {}) {
                 retries = retries >= 0 ? retries : globalOptions.retries;
 
-                const delayFn = createDelayFunc({ ...globalOptions, ...localOptions });
+                const computeDelay = backoff({ ...globalOptions, ...localOptions });
 
                 const handler = (msg) => {
-                    const count = retryCount(msg);
-                    const delay = delayFn(count);
+                    const count = context.count(msg.properties.headers);
+                    const delay = computeDelay(count);
                     const fallback = count >= retries ?
                         msg.nack.bind(msg, false, false) :
                         retry.bind(this, msg, delay);
