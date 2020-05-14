@@ -27,19 +27,16 @@ describe('dlx plugin', () => {
     it('should dead-letter nack\'d messages', (done) => {
         client
             .exchange('dlx')
-            .queue('deadLetters', { exclusive: true, noAck: true, deadLetterExchange: null })
+            .queue('deadLetters', { exclusive: true, deadLetterExchange: null })
             .subscribe('#', (msg) => {
                 if (msg.fields.routingKey === 'key'
-                    && msg.properties.headers['x-first-death-exchange'] === '') {
+                    && msg.properties.headers['x-death'][0]['exchange'] === '') {
                     done();
                 } else {
-                    done(new Error('Message routed differently'));
+                    done(new Error('Message routed differently:\n' + JSON.stringify(msg)));
                 }
-            })
-            .then(() => client
-                .subscribe('key', (msg) => {
-                    msg.nack(false, false);
-                }))
+            }, { noAck: true })
+            .then(() => client.subscribe('key', (msg) => msg.nack(false, false)))
             .then(() => client.publish('key', Buffer.from('hello')))
             .catch(done);
     });
