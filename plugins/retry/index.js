@@ -1,6 +1,7 @@
 const Plugin = require('../base');
 const { promise } = require('../helpers');
 const { Scopes: { API, CHANNEL } } = require('../../lib/constants');
+const { MessageError } = require('../../lib/errors');
 
 const backoff = require('./backoff');
 const context = require('./context');
@@ -17,6 +18,15 @@ function assertDelayQueue(delay, exchange) {
                     'x-match': 'all'
                 })));
     };
+}
+
+function isRetryable(err) {
+    if (err instanceof MessageError) {
+        const { properties: { headers } } = err.msg;
+        return !('retry-destination' in headers);
+    }
+    // more to come?
+    return true;
 }
 
 function retry(msg, delay = 500) {
@@ -69,14 +79,15 @@ module.exports = class extends Plugin {
 
                 const handler = (msg) => {
                     const count = context.count(msg.properties.headers);
+                    msg.properties.headers['x-retries'] = count;
                     const delay = computeDelay(count);
-                    const fallback = count >= retries ?
-                        msg.nack.bind(msg, false, false) :
-                        retry.bind(this, msg, delay);
+                    const retryable = (err) => count < retries && isRetryable(err);
                     return promise
                         .wrap(() => fn(msg))
                         .catch((err) => {
-                            fallback(err);
+                            retryable(err) ?
+                                retry.call(this, msg, delay, err) :
+                                msg.nack(false, false, err);
                             return err instanceof Error ? err : new Error(err);
                         });
                 };

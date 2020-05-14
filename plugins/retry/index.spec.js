@@ -48,5 +48,25 @@ describe('retry plugin', () => {
                 else done(new Error('Returned error does not match'));
             });
     });
+
+    it('should not retry when deeper rpc failed', (done) => {
+        Promise.all([
+            client.subscribe('rpc.1', () => {
+                throw 'error!';
+            }),
+            client.subscribe('rpc.2', () => {
+                return client.rpc('rpc.1', Buffer.from('he said hello'));
+            })
+        ])
+            .then(() => client.rpc('rpc.2', Buffer.from('hello')))
+            .then(() => {
+                done(new Error('RPC call should fail'));
+            })
+            .catch((err) => {
+                if (err.message === 'error!'
+                    && err.msg.properties.headers['x-retries'] === 0) done();
+                else done(new Error('Returned error does not match'));
+            }).catch(done);
+    });
 });
 
