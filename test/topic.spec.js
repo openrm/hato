@@ -9,7 +9,7 @@ describe('topic', function() {
             logger: console
         });
 
-        client.exchange(null, 'topic')
+        client.type('topic')
             .subscribe('routing.key.#', (msg) => {
                 const content = JSON.parse(Buffer.from(msg.content).toString());
 
@@ -24,7 +24,7 @@ describe('topic', function() {
             .catch(done);
 
         client.start()
-            .then(() => client.exchange(null, 'topic')
+            .then(() => client.type('topic')
                 .publish('routing.key.1', Buffer.from(JSON.stringify({ 1: 'message' }))))
             .catch(done);
 
@@ -51,13 +51,13 @@ describe('topic', function() {
             };
         };
 
-        client.exchange(null, 'topic')
+        client.type('topic')
             .subscribe('routing.key.#', process(1)).catch(done);
 
 
         client.start()
-            .then(() => client.exchange(null, 'topic').publish('routing.key.1', Buffer.from("1")))
-            .then(() => client.exchange(null, 'topic').publish('routing.key.2', Buffer.from("1")))
+            .then(() => client.type('topic').publish('routing.key.1', Buffer.from("1")))
+            .then(() => client.type('topic').publish('routing.key.2', Buffer.from("1")))
             .catch(done);
     });
 
@@ -84,14 +84,14 @@ describe('topic', function() {
             };
         };
 
-        client.exchange(null, 'topic')
+        client.type('topic')
             .subscribe('routing.#', process(1)).catch(done);
-        client.exchange(null, 'topic')
+        client.type('topic')
             .subscribe('routing.key.#', process(3)).catch(done);
 
 
         client.start()
-            .then(() => client.exchange(null, 'topic').publish('routing.key.1', Buffer.from("1")))
+            .then(() => client.type('topic').publish('routing.key.1', Buffer.from("1")))
             .catch(done);
     });
 });
