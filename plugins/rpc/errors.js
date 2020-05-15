@@ -7,8 +7,7 @@ const Keys = {
 
 const parse = (msg) => {
     return new Promise((resolve, reject) => {
-        const { properties: { headers } } = msg;
-        if (headers['x-error']) {
+        if (MessageError.is(msg)) {
             const deserialized = JSON.parse(msg.content.toString());
             reject(new MessageError(deserialized, msg));
         }
@@ -16,18 +15,19 @@ const parse = (msg) => {
     });
 };
 
+const extractHeaders = (err) =>
+    err.originalHeaders[Keys.originalHeaders] || err.originalHeaders;
+
 const serialize = (err) => {
-    const headers = { 'x-error': true };
     if (err instanceof MessageError) {
         const { properties: props } = err.msg;
-        const originalHeaders = props.headers[Keys.originalHeaders] || props.headers;
         return {
             content: Buffer.from(JSON.stringify(err.message)),
             options: {
                 ...props,
                 headers: {
-                    ...headers,
-                    [Keys.originalHeaders]: originalHeaders,
+                    ...err.toHeaders(),
+                    [Keys.originalHeaders]: extractHeaders(err),
                     [Keys.error]: true
                 },
                 contentType: 'application/json'
@@ -36,7 +36,7 @@ const serialize = (err) => {
     }
     return {
         content: Buffer.from(JSON.stringify(err.toString())),
-        options: { headers, contentType: 'application/json' }
+        options: { contentType: 'application/json' }
     };
 };
 
