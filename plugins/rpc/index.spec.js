@@ -1,5 +1,5 @@
-const { Client, errors: { TimeoutError } } = require('..');
-const RPC = require('./rpc');
+const { Client, errors: { TimeoutError } } = require('../..');
+const RPC = require('../rpc');
 
 describe('rpc plugin', () => {
     let client;

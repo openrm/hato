@@ -5,6 +5,9 @@ const { Scopes: { API, CHANNEL } } = require('../../lib/constants');
 const backoff = require('./backoff');
 const context = require('./context');
 const configs = require('./configs');
+const errors = require('./errors');
+
+const { RetryError } = errors;
 
 function assertDelayQueue(delay, exchange) {
     const { name, options } = configs.queue({ delay, exchange });
@@ -19,12 +22,16 @@ function assertDelayQueue(delay, exchange) {
     };
 }
 
-function retry(msg, delay = 500) {
+function retry(msg, count, delay = 500) {
     const { fields: { exchange, routingKey } } = msg;
     const { name: delayExchange } = configs.exchange();
+    const inject = context.inject(delay, exchange);
     const options = {
         ...msg.properties,
-        headers: context.inject(delay, exchange)(msg.properties.headers)
+        headers: inject({
+            ...msg.properties.headers,
+            'x-retry-count': count
+        })
     };
     return this._asserted()
         .then(assertDelayQueue(delay, exchange))
@@ -33,7 +40,6 @@ function retry(msg, delay = 500) {
                 .exchange(delayExchange)
                 .publish(routingKey, msg.content, options)
                 .then(msg.ack);
-            // TODO(naggingant) last ack fails on queues with no-ack set true
         });
 }
 
@@ -61,7 +67,9 @@ module.exports = class extends Plugin {
 
     handlePubsub(constructor) {
         const globalOptions = this.options;
+
         return class extends constructor {
+
             consume(queue, fn, { retries, retry: localOptions, ...options } = {}) {
                 retries = retries >= 0 ? retries : globalOptions.retries;
 
@@ -69,20 +77,24 @@ module.exports = class extends Plugin {
 
                 const handler = (msg) => {
                     const count = context.count(msg.properties.headers);
-                    const delay = computeDelay(count);
-                    const fallback = count >= retries ?
-                        msg.nack.bind(msg, false, false) :
-                        retry.bind(this, msg, delay);
+
+                    const retryable = (err) =>
+                        count < retries && errors.isRetryable(err) && !RetryError.is(msg);
+
                     return promise
                         .wrap(() => fn(msg))
                         .catch((err) => {
-                            fallback(err);
-                            return err instanceof Error ? err : new Error(err);
+                            retryable(err) ?
+                                retry.call(this, msg, count + 1, computeDelay(count)) :
+                                msg.nack(false, false, new RetryError(err, msg));
+                            return err instanceof Error ?
+                                err : new Error(err.toString());
                         });
                 };
 
                 return super.consume(queue, handler, options);
             }
+
         };
     }
 
