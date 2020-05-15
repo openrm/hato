@@ -1,5 +1,5 @@
 const { Client } = require('../index');
-const { RPC, Encoding } = require('../plugins');
+const { RPC, Duplex, Encoding } = require('../plugins');
 
 describe('rpc', function() {
     let client;
@@ -8,6 +8,7 @@ describe('rpc', function() {
         client = new Client('amqp://guest:guest@127.0.0.1:5672', {
             plugins: [
                 new Encoding('json'),
+                new Duplex(),
                 new RPC()
             ]
         });
