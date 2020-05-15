@@ -20,6 +20,9 @@ module.exports = {
         forward: forwardEvents,
         forwardAll: forwardAllEvents
     },
+    promise: {
+        wrap: (fn) => Promise.resolve().then(fn)
+    },
     expose: (src, dst, ...members) => {
         members.forEach((member) => {
             if (src[member] === undefined) return;
