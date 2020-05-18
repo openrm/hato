@@ -122,4 +122,24 @@ describe('direct', function() {
 
         client.publish('a.routing.key.s', Buffer.from("1")).catch(done);
     });
+
+    it('should be allowed to reuse a queue already declared', function(done) {
+        const check = (msg) => {
+            if (msg.content.toString() === '1') {
+                msg.ack(), done();
+            } else done(new Error(`Expected '1' but got ${msg.content.toString()}`));
+        };
+
+        (client = new Client('amqp://guest:guest@127.0.0.1:5672'))
+            .start()
+            .then(() => client.queue('foo')) // assert the queue first.
+            .then(() => client
+                .assert(false)
+                .queue('foo')
+                .subscribe('a.routing.key', check))
+            .then(() => client
+                .type('direct')
+                .publish('a.routing.key', Buffer.from('1')))
+            .catch(done);
+    });
 });
