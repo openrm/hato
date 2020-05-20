@@ -1,31 +1,39 @@
 const Client = require('./lib');
 const plugins = require('./plugins');
 
-// default plugins
-const {
-    Reconnection,
-    GracefulShutdown,
-    ConnectionRetry,
-    Duplex,
-    Encoding,
-    Retry
-} = plugins;
+const Plugins = {
+    gracefulShutdown: plugins.ConnectionRetry,
+    connectionRetry: plugins.ConnectionRetry,
+    reconnection: plugins.Reconnection,
+    duplex: plugins.Duplex,
+    encoding: plugins.Encoding,
+    rpc: plugins.RPC,
+    confirm: plugins.Confirm,
+    retry: plugins.Retry
+};
 
-// TODO(naggingant) export named constructor instead
+const resolvePlugins = (plugins) => plugins
+    .map((plugin) => typeof plugin === 'string' ? new Plugins[plugin]() : plugin);
+
 module.exports.connect = (url, options) => Client.start(url, {
     logger: console,
-    plugins: [
-        new ConnectionRetry(),
-        new GracefulShutdown(),
-        new Reconnection(),
-        new Duplex(),
-        new Encoding('json'),
-        new Retry()
-    ],
+    plugins: resolvePlugins([
+        'gracefulShutdown',
+        'connectionRetry',
+        'reconnection',
+        'duplex',
+        'encoding',
+        'rpc',
+        'confirm',
+        'retry'
+    ]),
     ...options
 });
 
-module.exports.Client = Client;
+module.exports.Client = function(url, { plugins = [], ...options }) {
+    return new Client(url, { plugins: resolvePlugins(plugins), ...options });
+};
+
 module.exports.constants = require('./lib/constants');
 module.exports.errors = require('./lib/errors');
 module.exports.plugins = plugins;
