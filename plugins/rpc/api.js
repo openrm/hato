@@ -28,7 +28,9 @@ function reply(fn) {
             .wrap(() => fn(msg))
             .then((res) => {
                 if (res instanceof Error) return res;
-                return this.publish(replyTo, res, { correlationId });
+                return this._asserted()
+                    .then((ch) =>
+                        ch.publish('', replyTo, res, { correlationId }));
             });
     };
 }
