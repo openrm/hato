@@ -13,7 +13,12 @@ const Plugins = {
 };
 
 const resolvePlugins = (plugins) => plugins
-    .map((plugin) => typeof plugin === 'string' ? new Plugins[plugin]() : plugin);
+    .filter(Boolean)
+    .map((plugin) => {
+        if (typeof plugin === 'string' && Plugins[plugin]) {
+            return new Plugins[plugin]();
+        } else return plugin;
+    });
 
 module.exports.connect = (url, options) => Client.start(url, {
     logger: console,
