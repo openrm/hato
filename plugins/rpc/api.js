@@ -41,12 +41,18 @@ function makeRpc(routingKey, msg, { timeout, ...options }) {
         const fn = (msg) =>
             this._resp.emit(msg.properties.correlationId, msg);
 
-        let timer, listener;
+        let timer, listener, tag;
+
+        const cleanup = () => {
+            this._resp.removeListener(correlationId, listener);
+            clearTimeout(timer);
+            this.cancel(tag);
+        };
 
         if (timeout > 0) {
             const abort = () => {
                 reject(new TimeoutError(timeout));
-                this._resp.removeListener(correlationId, listener);
+                cleanup();
             };
             timer = setTimeout(abort, timeout);
         }
@@ -54,12 +60,15 @@ function makeRpc(routingKey, msg, { timeout, ...options }) {
         this._resp.on(correlationId, listener = (msg) => {
             timer && clearTimeout(timer);
             errors.parse(msg).then(resolve, reject);
-            this._resp.removeListener(correlationId, listener);
+            cleanup();
         });
 
         this._asserted()
             .then((ch) => this._consume(ch, replyTo, fn, { noAck: true }))
-            .then(() => this.publish(routingKey, msg, options))
+            .then(({ consumerTag }) => {
+                tag = consumerTag;
+                return this.publish(routingKey, msg, options);
+            })
             .catch(reject);
     };
 }
