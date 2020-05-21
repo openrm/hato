@@ -30,7 +30,8 @@ function reply(fn) {
                 if (res instanceof Error) return res;
                 return this._asserted()
                     .then((ch) =>
-                        ch.publish('', replyTo, res, { correlationId }));
+                        ch.publish('', replyTo, res, { correlationId }))
+                    .then(() => msg.ack()); // TODO(naggingant) ack only once
             });
     };
 }
