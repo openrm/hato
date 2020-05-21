@@ -46,7 +46,7 @@ function makeRpc(routingKey, msg, { timeout, ...options }) {
         const cleanup = () => {
             this._resp.removeListener(correlationId, listener);
             clearTimeout(timer);
-            this.cancel(tag);
+            return this.cancel(tag).catch(reject);
         };
 
         if (timeout > 0) {
@@ -59,8 +59,9 @@ function makeRpc(routingKey, msg, { timeout, ...options }) {
 
         this._resp.on(correlationId, listener = (msg) => {
             timer && clearTimeout(timer);
-            errors.parse(msg).then(resolve, reject);
-            cleanup();
+            errors.parse(msg)
+                .then((res) => cleanup().then(() => res))
+                .then(resolve, reject);
         });
 
         this._asserted()
