@@ -14,6 +14,19 @@ function rpc(routingKey, msg, { uid, timeout, ...options }) {
             new Promise(rpc({ replyTo, correlationId, timeout, ...options })));
 }
 
+function ackOnce(msg) {
+    let acked = false;
+    const once = (fn) => (...args) => {
+        if (acked) return;
+        else acked = true;
+        return fn(...args);
+    };
+    msg.ack = once(msg.ack.bind(msg));
+    msg.nack = once(msg.nack.bind(msg));
+    msg.reject = once(msg.reject.bind(msg));
+    return msg;
+}
+
 function reply(fn) {
     return (msg) => {
         const {
@@ -24,6 +37,8 @@ function reply(fn) {
         // not a rpc
         if (!replyTo) return fn(msg);
 
+        msg = ackOnce(msg);
+
         return promise
             .wrap(() => fn(msg))
             .then((res) => {
@@ -31,7 +46,7 @@ function reply(fn) {
                 return this._asserted()
                     .then((ch) =>
                         ch.publish('', replyTo, res, { correlationId }))
-                    .then(() => msg.ack()); // TODO(naggingant) ack only once
+                    .then(() => msg.ack());
             });
     };
 }
