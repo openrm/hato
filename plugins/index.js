@@ -6,5 +6,6 @@ module.exports = {
     Encoding: require('./encoding'),
     RPC: require('./rpc'),
     Confirm: require('./confirm'),
-    Retry: require('./retry')
+    Retry: require('./retry'),
+    ServiceContext: require('./service')
 };
