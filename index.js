@@ -35,8 +35,12 @@ module.exports.connect = (url, options) => Client.start(url, {
     ...options
 });
 
-module.exports.Client = function(url, { plugins = [], ...options }) {
+module.exports.Client = function(url, { plugins = [], ...options } = {}) {
     return new Client(url, { plugins: resolvePlugins(plugins), ...options });
+};
+
+module.exports.Client.start = function(url, { plugins = [], ...options } = {}) {
+    return Client.start(url, { plugins: resolvePlugins(plugins), ...options });
 };
 
 module.exports.constants = require('./lib/constants');
