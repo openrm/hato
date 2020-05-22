@@ -1,8 +1,8 @@
 # amqp-node
 
-![CircleCI](https://img.shields.io/circleci/build/github/openrm/amqp-node)
-![Code Climate maintainability](https://img.shields.io/codeclimate/maintainability/openrm/amqp-node)
-![Code Climate coverage](https://img.shields.io/codeclimate/coverage/openrm/amqp-node)
+[![CircleCI](https://img.shields.io/circleci/build/github/openrm/amqp-node)](https://app.circleci.com/pipelines/github/openrm/amqp-node?branch=master)
+[![Code Climate maintainability](https://img.shields.io/codeclimate/maintainability/openrm/amqp-node)](https://codeclimate.com/repos/5eb8c1314deafc018c000c2a/maintainability)
+[![Code Climate coverage](https://img.shields.io/codeclimate/coverage/openrm/amqp-node)](https://codeclimate.com/repos/5eb8c1314deafc018c000c2a/test_coverage)
 
 A minamalist, customizeable AMQP framework
 
