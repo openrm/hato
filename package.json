@@ -1,5 +1,5 @@
 {
-  "name": "amqp-node",
+  "name": "hato",
   "version": "0.0.1",
   "description": "A real-world AMQP framework in Node.js",
   "main": "index.js",
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openrm/amqp-node.git"
+    "url": "git+https://github.com/openrm/hato.git"
   },
   "keywords": [
     "amqp"
@@ -16,9 +16,9 @@
   "author": "Open Room Inc.",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/openrm/amqp-node/issues"
+    "url": "https://github.com/openrm/hato/issues"
   },
-  "homepage": "https://github.com/openrm/amqp-node#readme",
+  "homepage": "https://github.com/openrm/hato#readme",
   "dependencies": {
     "amqplib": "^0.5.5",
     "puid": "^1.0.7"
