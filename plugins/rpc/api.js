@@ -14,6 +14,19 @@ function rpc(routingKey, msg, { uid, timeout, ...options }) {
             new Promise(rpc({ replyTo, correlationId, timeout, ...options })));
 }
 
+function ackOnce(msg) {
+    let acked = false;
+    const once = (fn) => (...args) => {
+        if (acked) return;
+        else acked = true;
+        return fn(...args);
+    };
+    msg.ack = once(msg.ack.bind(msg));
+    msg.nack = once(msg.nack.bind(msg));
+    msg.reject = once(msg.reject.bind(msg));
+    return msg;
+}
+
 function reply(fn) {
     return (msg) => {
         const {
@@ -24,11 +37,16 @@ function reply(fn) {
         // not a rpc
         if (!replyTo) return fn(msg);
 
+        msg = ackOnce(msg);
+
         return promise
             .wrap(() => fn(msg))
             .then((res) => {
                 if (res instanceof Error) return res;
-                return this.publish(replyTo, res, { correlationId });
+                return this._asserted()
+                    .then((ch) =>
+                        ch.publish('', replyTo, res, { correlationId }))
+                    .then(() => msg.ack());
             });
     };
 }
@@ -39,25 +57,35 @@ function makeRpc(routingKey, msg, { timeout, ...options }) {
         const fn = (msg) =>
             this._resp.emit(msg.properties.correlationId, msg);
 
-        let timer, listener;
+        let timer, listener, tag;
+
+        const cleanup = () => {
+            this._resp.removeListener(correlationId, listener);
+            clearTimeout(timer);
+            return this.cancel(tag).catch(reject);
+        };
 
         if (timeout > 0) {
             const abort = () => {
                 reject(new TimeoutError(timeout));
-                this._resp.removeListener(correlationId, listener);
+                cleanup();
             };
             timer = setTimeout(abort, timeout);
         }
 
         this._resp.on(correlationId, listener = (msg) => {
             timer && clearTimeout(timer);
-            errors.parse(msg).then(resolve, reject);
-            this._resp.removeListener(correlationId, listener);
+            errors.parse(msg)
+                .then((res) => cleanup().then(() => res))
+                .then(resolve, reject);
         });
 
         this._asserted()
             .then((ch) => this._consume(ch, replyTo, fn, { noAck: true }))
-            .then(() => this.publish(routingKey, msg, options))
+            .then(({ consumerTag }) => {
+                tag = consumerTag;
+                return this.publish(routingKey, msg, options);
+            })
             .catch(reject);
     };
 }

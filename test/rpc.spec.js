@@ -54,4 +54,26 @@ describe('rpc', function() {
             })
             .catch(done);
     });
+    it('should reply properly to a direct call', function(done) {
+        client = new Client('amqp://guest:guest@127.0.0.1:5672', {
+            plugins: [
+                new Encoding('json'),
+                new RPC()
+            ]
+        });
+
+        client.type('direct').subscribe('rpc.1', (msg) => {
+            msg.ack();
+            return 1;
+        })
+        .catch(done);
+
+        client.start()
+            .then(() => client.type('direct').rpc('rpc.1', { 1: 'message' }))
+            .then(answer => {
+                if (answer.content === 1) done();
+                else done(new Error(`Message does not match ${answer.content} vs. ${1})`));
+            })
+            .catch(done);
+    });
 });

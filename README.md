@@ -1,18 +1,18 @@
-# amqp-node
+# hato
 
-[![CircleCI](https://img.shields.io/circleci/build/github/openrm/amqp-node)](https://app.circleci.com/pipelines/github/openrm/amqp-node?branch=master)
-[![Code Climate maintainability](https://img.shields.io/codeclimate/maintainability/openrm/amqp-node)](https://codeclimate.com/repos/5eb8c1314deafc018c000c2a/maintainability)
-[![Code Climate coverage](https://img.shields.io/codeclimate/coverage/openrm/amqp-node)](https://codeclimate.com/repos/5eb8c1314deafc018c000c2a/test_coverage)
+[![CircleCI](https://img.shields.io/circleci/build/github/openrm/hato)](https://app.circleci.com/pipelines/github/openrm/hato?branch=master)
+[![Code Climate maintainability](https://img.shields.io/codeclimate/maintainability/openrm/hato)](https://codeclimate.com/repos/5eb8c1314deafc018c000c2a/maintainability)
+[![Code Climate coverage](https://img.shields.io/codeclimate/coverage/openrm/hato)](https://codeclimate.com/repos/5eb8c1314deafc018c000c2a/test_coverage)
 
 A minamalist, customizeable AMQP framework
 
 ## Installation
 ```sh
-$ git clone https://github.com/openrm/amqp-node.git
+$ git clone https://github.com/openrm/hato.git
 ```
 
 ## About
-amqp-node aims to simplify messaging without diminishing the flexibility and power in doing so.
+hato aims to simplify messaging without diminishing the flexibility and power in doing so.
 
 This library is highly customizeable. Plugins allow for a configuration that fits your project and for extension of the library to meet unique requirements.
 
@@ -27,7 +27,7 @@ $ docker run -it --name rabbitmq -p 5672:5672 rabbitmq:3.6-alpine
 Include the library and plugins
 
 ```js
-const { Client, plugins } = require('../amqp-node');
+const { Client, plugins } = require('hato');
 ```
 
 
@@ -75,4 +75,4 @@ client.type('topic')
 
 
 ## License
-[MIT](https://github.com/openrm/amqp-node/blob/master/LICENSE)
+[MIT](https://github.com/openrm/hato/blob/master/LICENSE)

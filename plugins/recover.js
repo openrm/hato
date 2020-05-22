@@ -6,11 +6,10 @@ const { TimeoutError } = require('../lib/errors');
 
 class Recoverable extends EventEmitter {
 
-    constructor(conn, create, { logger, cancel, timeout = 5 * 1e3 } = {}) {
+    constructor(conn, create, { logger, timeout = 5 * 1e3 } = {}) {
         super();
 
         this.logger = logger;
-        this.cancel = cancel;
 
         conn.on('close', (err) => {
             if (!err) return;
@@ -21,8 +20,11 @@ class Recoverable extends EventEmitter {
             this.logger.info('[AMQP:recover] Attempting to recover the connection...');
 
             // set timeout for retries
-            const timer = setTimeout(() =>
-                cancel(new TimeoutError(timeout)), timeout);
+            const timer = setTimeout(() => {
+                this.logger.error('[AMQP:recover] Recovery attempt timed out.');
+                this._conn = Promise.resolve(null);
+                this.emit('close', new TimeoutError(timeout));
+            }, timeout);
 
             this._conn = create()
                 .then((conn) => {
@@ -48,9 +50,8 @@ class Recoverable extends EventEmitter {
     }
 
     close(err) {
-        this.cancel(err);
         return this._conn
-            .then((conn) => conn.close())
+            .then((conn) => conn && conn.close())
             .then(() => {
                 this.emit('close', err);
             });
