@@ -24,11 +24,19 @@ const associateContext = (resource, service) => (connect) =>
         });
     };
 
+const serializeHeaders = (headers) => Object
+    .entries(headers)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(';');
+
 const queueName = (binding, exchange, service) => {
     let name = `${service.name}:`;
 
     if (typeof binding === 'string') name += binding;
-    else name += JSON.stringify(binding || null);
+    else if (typeof binding === 'object') {
+        // exchange of `headers` type
+        name += serializeHeaders(binding || {});
+    }
 
     return name += exchange ? `:${exchange}` : '';
 };
