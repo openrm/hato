@@ -14,9 +14,9 @@ class DuplexConnection extends EventEmitter {
         this._conns = {};
         this._connect = connect;
     }
-    connect() {
+    connect(...args) {
         const cxns = Object.values(Modes).map((mode) => {
-            return this._conns[mode] = this._connect();
+            return this._conns[mode] = this._connect(...args);
         });
         return Promise.all(cxns).then(() => this);
     }

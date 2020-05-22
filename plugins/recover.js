@@ -77,7 +77,7 @@ module.exports = class extends Plugin {
                 return (connect) => (...args) => {
                     const options = Object.assign(context, this.options);
                     return connect(...args)
-                        .then((conn) => new Recoverable(conn, connect.bind(conn, ...args), options));
+                        .then((conn) => new Recoverable(conn, () => connect(...args), options));
                 };
             }
         };
