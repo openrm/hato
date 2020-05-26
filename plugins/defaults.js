@@ -21,7 +21,7 @@ const wrap = function(ch, name, pos, defaults) {
     ch[name] = function(...args) {
         args[pos] = setDefaults(args[pos], defaults);
         return original.apply(ch, args);
-    }
+    };
 };
 
 module.exports = class DefaultOptions extends Plugin {
