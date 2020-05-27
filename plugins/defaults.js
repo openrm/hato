@@ -1,13 +1,12 @@
 const Plugin = require('./base');
 const { Scopes } = require('../lib/constants');
 
+const isObject = (v) => v !== null && typeof v === 'object';
+
 const setDefaults = (options = {}, defaults) => {
     return Object.keys(options)
         .reduce((acc, key) => {
-            if (acc[key] !== null &&
-                options[key] !== null &&
-                typeof acc[key] === 'object' &&
-                typeof options[key] === 'object') {
+            if (isObject(acc[key]) && isObject(options[key])) {
                 return Object.assign(acc, {
                     [key]: setDefaults(options[key], acc[key])
                 });
