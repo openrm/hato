@@ -9,7 +9,11 @@ function rpc(routingKey, msg, { uid, timeout, ...options }) {
     const rpc = makeRpc.bind(this, routingKey, msg);
 
     return this._asserted()
-        .then((ch) => ch.assertQueue('', { exclusive: true, autoDelete: true }))
+        .then((ch) => ch.assertQueue('', {
+            durable: false,
+            exclusive: true,
+            autoDelete: true
+        }))
         .then(({ queue: replyTo }) =>
             new Promise(rpc({ replyTo, correlationId, timeout, ...options })));
 }

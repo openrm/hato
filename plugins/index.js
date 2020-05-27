@@ -7,5 +7,6 @@ module.exports = {
     RPC: require('./rpc'),
     Confirm: require('./confirm'),
     Retry: require('./retry'),
-    ServiceContext: require('./service')
+    ServiceContext: require('./service'),
+    DefaultOptions: require('./defaults')
 };
