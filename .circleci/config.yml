@@ -18,6 +18,11 @@ make: &make
     name: Install GNU Make
     command: apk add make --no-cache
 
+wait: &wait
+  run:
+    name: Wait for RabbitMQ to start
+    command: until nc -z 127.0.0.1 5672; do sleep 1; done
+
 test: &test
   steps:
     - checkout
@@ -27,10 +32,10 @@ test: &test
         name: Install dependencies
         command: make deps
     - *cache
+    - *wait
     - run:
         name: Run tests
         command: make test
-
 
 jobs:
   lint:
@@ -84,6 +89,7 @@ jobs:
           name: Install dependencies
           command: make deps
       - *cache
+      - *wait
       - run:
           name: Run tests & calculate coverage
           command: make coverage
