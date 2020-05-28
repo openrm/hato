@@ -20,7 +20,7 @@ make: &make
 
 wait: &wait
   run:
-    name: Wait for RabbitMQ to start
+    name: Wait For RabbitMQ To Start
     command: until nc -z 127.0.0.1 5672; do sleep 1; done
 
 test: &test
@@ -29,12 +29,12 @@ test: &test
     - *restore
     - *make
     - run:
-        name: Install dependencies
+        name: Install Dependencies
         command: make deps
     - *cache
     - *wait
     - run:
-        name: Run tests
+        name: Run Tests
         command: make test
 
 jobs:
@@ -43,9 +43,13 @@ jobs:
       - image: node:13-alpine
     steps:
       - checkout
-      - run: npm install --no-save eslint@^6.8.0
+      - run:
+          name: Install ESLint
+          command: npm install --no-save eslint@^6.8.0
       - *make
-      - run: make lint
+      - run:
+          name: Run ESLint
+          command: make lint
 
   node8:
     docker:
@@ -86,12 +90,12 @@ jobs:
       - *restore
       - *make
       - run:
-          name: Install dependencies
+          name: Install Dependencies
           command: make deps
       - *cache
       - *wait
       - run:
-          name: Run tests & calculate coverage
+          name: Run Tests & Calculate Coverage
           command: make coverage
 
       - persist_to_workspace:
