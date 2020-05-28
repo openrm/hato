@@ -1,34 +1,101 @@
 version: 2
+
+rabbitmq: &rabbitmq
+  image: rabbitmq:3-alpine
+
+restore: &restore
+  restore_cache:
+    key: deps-{{ checksum "package-lock.json" }}
+
+cache: &cache
+  save_cache:
+    key: deps-{{ checksum "package-lock.json" }}
+    paths:
+      - node_modules/
+
+make: &make
+  run:
+    name: Install GNU Make
+    command: apk add make --no-cache
+
+test: &test
+  steps:
+    - checkout
+    - *restore
+    - *make
+    - run:
+        name: Install dependencies
+        command: make deps
+    - *cache
+    - run:
+        name: Run tests
+        command: make test
+
+
 jobs:
-  lint-and-test:
+  lint:
     docker:
-      - image: node:11.12-alpine
-      - image: rabbitmq:3.6-alpine
+      - image: node:13-alpine
     steps:
       - checkout
-
-      - restore_cache:
-          key: deps-{{ checksum "package-lock.json" }}
-
-      - run: npm install
-
-      - save_cache:
-          key: deps-{{ checksum "package-lock.json" }}
-          paths:
-            - "node_modules/"
-
-      - run: apk add make --no-cache
+      - run: npm install --no-save eslint@^6.8.0
+      - *make
       - run: make lint
-      - run: make cover
+
+  node8:
+    docker:
+      - image: node:8-alpine
+      - *rabbitmq
+    <<: *test
+
+  node10:
+    docker:
+      - image: node:10-alpine
+      - *rabbitmq
+    <<: *test
+
+  node11:
+    docker:
+      - image: node:11-alpine
+      - *rabbitmq
+    <<: *test
+
+  node12:
+    docker:
+      - image: node:12-alpine
+      - *rabbitmq
+    <<: *test
+
+  node14:
+    docker:
+      - image: node:14-alpine
+      - *rabbitmq
+    <<: *test
+
+  coverage:
+    docker:
+      - image: node:13-alpine
+      - *rabbitmq
+    steps:
+      - checkout
+      - *restore
+      - *make
+      - run:
+          name: Install dependencies
+          command: make deps
+      - *cache
+      - run:
+          name: Run tests & calculate coverage
+          command: make coverage
 
       - persist_to_workspace:
           root: coverage
           paths:
             - lcov.info
 
-  upload_coverage:
+  report_coverage:
     docker:
-      - image: node:11.12-alpine
+      - image: node:13-alpine
     steps:
       - run: apk add --no-cache git ca-certificates curl
 
@@ -44,9 +111,27 @@ jobs:
 
 workflows:
   version: 2
-  lint-and-test:
+  build:
     jobs:
-    - lint-and-test
-    - upload_coverage:
-        requires:
-          - lint-and-test
+      - lint
+      - node8:
+          requires:
+            - lint
+      - node10:
+          requires:
+            - lint
+      - node11:
+          requires:
+            - lint
+      - node12:
+          requires:
+            - lint
+      - node14:
+          requires:
+            - lint
+      - coverage:
+          requires:
+            - lint
+      - report_coverage:
+          requires:
+            - coverage

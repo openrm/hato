@@ -1,17 +1,23 @@
 #!make
 
-.PHONY: test cover lint lint-fix
+.PHONY: deps test coverage lint lint-fix
 
-serviceName := $(shell basename `pwd`)
+NPM_BIN = ./node_modules/.bin
+export NODE_ENV ?= test
+
+node_modules: package.json
+	@npm install
+
+deps: node_modules
 
 test:
-	NODE_ENV=test ./node_modules/.bin/mocha "test/**/*.js" "**/*.spec.js" --exit
+	@$(NPM_BIN)/mocha "test/**/*.js" "**/*.spec.js" --exit
 
-cover:
-	NODE_ENV=test ./node_modules/.bin/nyc -x "test/*" -x "**/*.spec.js" --reporter=lcov --reporter=text-lcov ./node_modules/.bin/mocha "test/**/*.js" "**/*.spec.js" --exit
+coverage:
+	@$(NPM_BIN)/nyc -x "test/*" -x "**/*.spec.js" --reporter=lcov --reporter=text-lcov --reporter=text $(MAKE) -s test
 
 lint:
-	./node_modules/.bin/eslint index.js plugins lib
+	@$(NPM_BIN)/eslint index.js plugins lib
 
 lint-fix:
-	./node_modules/.bin/eslint index.js plugins lib --fix
+	@$(NPM_BIN)/eslint index.js plugins lib --fix
