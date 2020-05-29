@@ -4,7 +4,6 @@ const plugins = require('./plugins');
 const Plugins = {
     gracefulShutdown: plugins.ConnectionRetry,
     connectionRetry: plugins.ConnectionRetry,
-    reconnection: plugins.Reconnection,
     duplex: plugins.Duplex,
     encoding: plugins.Encoding,
     rpc: plugins.RPC,
@@ -25,7 +24,6 @@ module.exports.connect = (url, options) => Client.start(url, {
     plugins: resolvePlugins([
         'gracefulShutdown',
         'connectionRetry',
-        'reconnection',
         'duplex',
         'encoding',
         'rpc',
