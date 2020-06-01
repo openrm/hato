@@ -17,6 +17,8 @@ hato aims to simplify messaging without diminishing the flexibility and power in
 
 This library is highly customizeable. Plugins allow for a configuration that fits your project and for extension of the library to meet unique requirements.
 
+The library is built upon [amqplib](https://www.npmjs.com/package/amqplib) and is compatible with AMQP 0-9-1 and is promise based (can be overriden).
+
 ## Getting Started
 
 Include the library and plugins
@@ -26,18 +28,20 @@ const { Client, plugins } = require('hato');
 ```
 
 
-Construct a new client with the plugins of your choosing
+Construct a new client
 ```js
 const client = new Client(BROKER_URL, {
     plugins: [
-        new plugins.GracefulShutdown(),
-        new plugins.ConnectionRetry(),
-        new plugins.Duplex(),
-        new plugins.Encoding('json'),
-        new plugins.RPC(),
-        new plugins.Confirm(),
-        new plugins.Retry()
-    ]
+        'gracefulShutdown', // register plugin with default options
+        'connectionRetry',
+        'duplex',
+        new plugins.Encoding('json') // instantiate for a detailed configuration
+    ],
+
+    /**
+     * Optionally specify a module for logging
+     */
+    logger: myLogger,
 });
 ```
 
