@@ -1,6 +1,6 @@
 #!make
 
-.PHONY: deps test coverage lint lint-fix
+.PHONY: deps test coverage lint lint-fix types
 
 NPM_BIN = ./node_modules/.bin
 export NODE_ENV ?= test
@@ -21,3 +21,6 @@ lint:
 
 lint-fix:
 	@$(NPM_BIN)/eslint index.js plugins lib --fix
+
+types:
+	@$(NPM_BIN)/tsc -p .
