@@ -34,7 +34,7 @@ module.exports.connect = (url, options) => Client.start(url, {
 });
 
 module.exports.Client = function(url, { plugins = [], ...options } = {}) {
-    return new Client(url, { plugins: resolvePlugins(plugins), ...options });
+    return Client(url, { plugins: resolvePlugins(plugins), ...options });
 };
 
 module.exports.Client.start = function(url, { plugins = [], ...options } = {}) {

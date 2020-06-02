@@ -3,6 +3,17 @@ const { promise } = require('../helpers');
 const { TimeoutError } = require('../../lib/errors');
 const errors = require('./errors');
 
+/**
+ * @typedef { import("../../lib/api") } ContextChannel
+ *
+ * @typedef {object} RPCMethods
+ * @property {EventEmitter} _resp
+ * @property {any} rpc
+ *
+ * @typedef {ContextChannel & RPCMethods} RPCChannel
+ */
+
+/** @this {RPCChannel} */
 function rpc(routingKey, msg, { uid, timeout, ...options }) {
     const correlationId = uid.generate();
 
@@ -31,6 +42,11 @@ function ackOnce(msg) {
     return msg;
 }
 
+/**
+ * @this {RPCChannel}
+ * @param {(msg: any) => Promise<any>} fn
+ * @return {(msg: any) => Promise<any>} fn
+ */
 function reply(fn) {
     return (msg) => {
         const {
@@ -55,6 +71,7 @@ function reply(fn) {
     };
 }
 
+/** @this {RPCChannel} */
 function makeRpc(routingKey, msg, { timeout, ...options }) {
     const { correlationId, replyTo } = options;
     return (resolve, reject) => {
@@ -94,17 +111,26 @@ function makeRpc(routingKey, msg, { timeout, ...options }) {
     };
 }
 
-module.exports = (config) => () =>
-    (constructor) => class extends constructor {
-        constructor(...args) {
-            super(...args);
-            // used to correlate rpc requests and replies
-            this._resp = new EventEmitter();
-        }
-        rpc(routingKey, msg, { uid = config.uid, timeout = config.timeout, ...options } = {}) {
-            return rpc.call(this, routingKey, msg, { uid, timeout, ...options });
-        }
-        consume(queue, fn, options) {
-            return super.consume(queue, reply.call(this, fn), options);
-        }
-    };
+/**
+ * @param {{ uid: { generate: () => string }, timeout: number }} config
+ * */
+module.exports = function(config) {
+    return () =>
+        /**
+         * @param {{ new(ctx: object | null, fields: any): ContextChannel }} constructor
+         */
+        (constructor) =>
+            class RPCChannel extends constructor {
+                constructor(ctx, fields) {
+                    super(ctx, fields);
+                    // used to correlate rpc requests and replies
+                    this._resp = new EventEmitter();
+                }
+                rpc(routingKey, msg, { uid = config.uid, timeout = config.timeout, ...options } = {}) {
+                    return rpc.call(this, routingKey, msg, { uid, timeout, ...options });
+                }
+                consume(queue, fn, options) {
+                    return super.consume(queue, reply.call(this, fn), options);
+                }
+            };
+}

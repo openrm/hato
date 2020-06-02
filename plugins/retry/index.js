@@ -9,6 +9,10 @@ const errors = require('./errors');
 
 const { RetryError } = errors;
 
+/**
+ * @typedef { import("../../lib/api") } ContextChannel
+ */
+
 function assertDelayQueue(delay, exchange) {
     const { name, options } = configs.queue({ delay, exchange });
     const { name: ex } = configs.exchange();
@@ -22,6 +26,7 @@ function assertDelayQueue(delay, exchange) {
     };
 }
 
+/** @this {ContextChannel} */
 function retry(msg, count, delay = 500) {
     const { fields: { exchange, routingKey } } = msg;
     const { name: delayExchange } = configs.exchange();
@@ -70,7 +75,11 @@ module.exports = class extends Plugin {
 
         return class extends constructor {
 
-            consume(queue, fn, { retries, retry: localOptions, ...options } = {}) {
+            consume(queue, fn, {
+                retries = globalOptions.retries,
+                retry: localOptions = {},
+                ...options
+            } = {}) {
                 retries = retries >= 0 ? retries : globalOptions.retries;
 
                 const computeDelay = backoff({ ...globalOptions, ...localOptions });

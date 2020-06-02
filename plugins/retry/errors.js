@@ -1,5 +1,9 @@
 const { MessageError } = require('../../lib/errors');
 
+/**
+ * @typedef { import("../../lib/errors").MessageError } MessageError
+ */
+
 class RetryError extends MessageError {
     constructor(err, msg) {
         if (RetryError.promotable(err)) {

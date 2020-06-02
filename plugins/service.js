@@ -13,13 +13,10 @@ const setContext = (properties, service) => {
     }).reduce(merge, properties);
 };
 
-const associateContext = (resource, service) => (connect) =>
+const associateContext = (service) => (connect) =>
     (url, { clientProperties = {}, ...socketOptions } = {}) => {
-        if (!resource) {
-            clientProperties = setContext(clientProperties, service);
-        }
         return connect(url, {
-            clientProperties,
+            clientProperties: setContext(clientProperties, service),
             ...socketOptions
         });
     };
@@ -43,12 +40,21 @@ const queueName = (binding, exchange, service) => {
 
 module.exports = class ServiceContext extends Plugin {
 
-    constructor({ resource, queue = {}, ...service } = {}) {
+    /**
+     * @typedef {object} ServiceContextConfig
+     * @property {{ options?: object }=} queue
+     * @property {string=} name
+     * @property {string=} version
+     * @property {string=} instanceId
+     * @property {string=} namespace
+     */
+    /** @param {ServiceContextConfig} config */
+    constructor({ queue = {}, ...service } = {}) {
         super();
 
         const defaultOptions = queue.options;
         this.wrappers = {
-            [Scopes.CONNECTION]: () => associateContext(resource, service),
+            [Scopes.CONNECTION]: () => associateContext(service),
             [Scopes.API]: () => (base) => class extends base {
                 consume(binding, fn, options) {
                     const { queue, exchange } = this._validateContext();

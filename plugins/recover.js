@@ -6,7 +6,7 @@ const { TimeoutError } = require('../lib/errors');
 
 class Recoverable extends EventEmitter {
 
-    constructor(conn, create, { logger, timeout = 5 * 1e3 } = {}) {
+    constructor(conn, create, { logger = console, timeout = 5 * 1e3 } = {}) {
         super();
 
         this.logger = logger;
