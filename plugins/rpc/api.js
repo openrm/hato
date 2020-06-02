@@ -133,4 +133,4 @@ module.exports = function(config) {
                     return super.consume(queue, reply.call(this, fn), options);
                 }
             };
-}
+};
