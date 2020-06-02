@@ -19,14 +19,14 @@ describe('direct', function() {
             msg.ack();
 
             if (content[1] === 'message') {
-                done();
+                confirmed.then(() => done());
             } else {
                 done(new Error("Message not carried properly"));
             }
         })
         .catch(done);
 
-        client.publish('a.routing.key', { 1: 'message' }).catch(done);
+        const confirmed = client.publish('a.routing.key', { 1: 'message' }).catch(done);
 
     });
 
@@ -46,7 +46,7 @@ describe('direct', function() {
                 msg.ack();
 
                 if (calls === 4) {
-                    done();
+                    confirmed.then(() => done());
                 } else if (calls === 2) {
                     done(new Error("Message received twice on the first subscriber"));
                 } else if (calls === 6) {
@@ -58,8 +58,10 @@ describe('direct', function() {
         client.subscribe('a.routing.key.rr', process(1)).catch(done);
         client.subscribe('a.routing.key.rr', process(3)).catch(done);
 
-        client.publish('a.routing.key.rr', Buffer.from("1")).catch(done);
-        client.publish('a.routing.key.rr', Buffer.from("1")).catch(done);
+        const confirmed = Promise.all([
+            client.publish('a.routing.key.rr', Buffer.from("1")),
+            client.publish('a.routing.key.rr', Buffer.from("1"))
+        ]).catch(done);
     });
 
     it('should receive multiple repeated messages', function(done) {
@@ -77,7 +79,7 @@ describe('direct', function() {
                 msg.ack();
 
                 if (calls === 2) {
-                    done();
+                    confirmed.then(() => done());
                 } else if (calls === 3) {
                     done(new Error("Message received more than twice"));
                 }
@@ -86,8 +88,10 @@ describe('direct', function() {
 
         client.subscribe('a.routing.key.s', process(1)).catch(done);
 
-        client.publish('a.routing.key.s', Buffer.from("1")).catch(done);
-        client.publish('a.routing.key.s', Buffer.from("1")).catch(done);
+        const confirmed = Promise.all([
+            client.publish('a.routing.key.s', Buffer.from("1")),
+            client.publish('a.routing.key.s', Buffer.from("1"))
+        ]).catch(done);
     });
 
 
@@ -111,7 +115,7 @@ describe('direct', function() {
                 msg.ack();
 
                 if (calls === 2) {
-                    done();
+                    confirmed.then(() => done());
                 } else if (calls === 3) {
                     done(new Error("Message processed more than twice"));
                 }
@@ -120,17 +124,18 @@ describe('direct', function() {
 
         client.subscribe('a.routing.key.s', process(1)).catch(done);
 
-        client.publish('a.routing.key.s', Buffer.from("1")).catch(done);
+        const confirmed = client.publish('a.routing.key.s', Buffer.from("1")).catch(done);
     });
 
     it('should be allowed to reuse a queue already declared', function(done) {
         const check = (msg) => {
             if (msg.content.toString() === '1') {
-                msg.ack(), done();
+                msg.ack(), confirmed.then(() => done());
             } else done(new Error(`Expected '1' but got ${msg.content.toString()}`));
         };
 
-        (client = new Client('amqp://guest:guest@127.0.0.1:5672'))
+        const confirmed =
+            (client = new Client('amqp://guest:guest@127.0.0.1:5672'))
             .start()
             .then(() => client.queue('foo')) // assert the queue first.
             .then(() => client
