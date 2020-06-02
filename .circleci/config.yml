@@ -139,26 +139,30 @@ workflows:
   build:
     jobs:
       - lint
-      - typecheck:
-          requires:
-            - lint
+      - typecheck
       - node8:
           requires:
+            - lint
             - typecheck
       - node10:
           requires:
+            - lint
             - typecheck
       - node11:
           requires:
+            - lint
             - typecheck
       - node12:
           requires:
+            - lint
             - typecheck
       - node14:
           requires:
+            - lint
             - typecheck
       - coverage:
           requires:
+            - lint
             - typecheck
       - report_coverage:
           requires:
