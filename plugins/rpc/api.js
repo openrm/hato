@@ -4,7 +4,7 @@ const { TimeoutError } = require('../../lib/errors');
 const errors = require('./errors');
 
 /**
- * @typedef { import("../../lib/api") } ContextChannel
+ * @typedef {import('../../lib/api')} ContextChannel
  *
  * @typedef {object} RPCMethods
  * @property {EventEmitter} _resp

@@ -1,7 +1,7 @@
 const { MessageError } = require('../../lib/errors');
 
 /**
- * @typedef { import("../../lib/errors").MessageError } MessageError
+ * @typedef {import('../../lib/errors').MessageError} MessageError
  */
 
 class RetryError extends MessageError {

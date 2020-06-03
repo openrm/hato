@@ -11,9 +11,9 @@ const plugins = require('./plugins');
 //
 
 /**
- * @typedef { import("./lib").Client } Client
- * @typedef { import("./lib").Plugin } Plugin
- * @typedef { import("./lib").Options & { plugins?: (Plugin | string)[] }} Options
+ * @typedef {import('./lib').Client} Client
+ * @typedef {import('./lib').Plugin} Plugin
+ * @typedef {import('./lib').Options & { plugins?: (Plugin | string)[] }} Options
  */
 
 

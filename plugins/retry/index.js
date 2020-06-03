@@ -10,7 +10,7 @@ const errors = require('./errors');
 const { RetryError } = errors;
 
 /**
- * @typedef { import("../../lib/api") } ContextChannel
+ * @typedef {import('../../lib/api')} ContextChannel
  */
 
 function assertDelayQueue(delay, exchange) {
