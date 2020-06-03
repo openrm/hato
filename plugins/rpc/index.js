@@ -4,18 +4,16 @@ const errors = require('./errors');
 
 const Puid = require('puid');
 
-module.exports = class extends Plugin {
+module.exports = class RPCPlugin extends Plugin {
 
     constructor({ uid = new Puid(), timeout = 0 } = {}) {
         super();
-
-        this.uid = uid, this.timeout = timeout;
 
         this.wrappers = {
 
             [Scopes.CHANNEL]: this.replyOnNack,
 
-            [Scopes.API]: require('./api')(this),
+            [Scopes.API]: require('./api')({ uid, timeout }),
 
         };
     }
@@ -25,7 +23,7 @@ module.exports = class extends Plugin {
             .then((ch) => {
                 const nack = ch.nack;
                 ch.nack = function(msg, multiple, requeue, err) {
-                    nack.apply(ch, arguments);
+                    nack.call(ch, msg, multiple, requeue);
 
                     // not a rpc
                     if (!msg.properties.replyTo) return;
