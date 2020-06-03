@@ -36,7 +36,7 @@ const serialize = (err) => {
     }
     return {
         content: Buffer.from(JSON.stringify(err.toString())),
-        options: { contentType: 'application/json' }
+        options: { headers: {}, contentType: 'application/json' }
     };
 };
 
