@@ -17,7 +17,7 @@ hato aims to simplify messaging without diminishing the flexibility and power in
 
 This library is highly customizeable. Plugins allow for a configuration that fits your project and for extension of the library to meet unique requirements.
 
-The library is built upon [amqplib](https://www.npmjs.com/package/amqplib) and is compatible with AMQP 0-9-1 and is promise based (can be overriden).
+The library is built upon [amqplib](https://www.npmjs.com/package/amqplib) and is compatible with AMQP 0-9-1 and is promise based (the implementation of which can be overriden).
 
 ## Getting Started
 
