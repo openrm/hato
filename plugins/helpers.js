@@ -1,5 +1,12 @@
+const state = new WeakMap();
+
 function forwardEvents(src, dst, ...events) {
-    events.forEach((name) => src.on(name, dst.emit.bind(dst)));
+    events.forEach((name) => src.on(name, (...args) => {
+        if (state.has(dst) && state.get(dst).includes(name)) return;
+        state.set(src, (state.get(src) || []).concat(name));
+        dst.emit(name, ...args);
+        state.set(src, state.get(src).filter(_name => _name !== name));
+    }));
     return dst;
 }
 

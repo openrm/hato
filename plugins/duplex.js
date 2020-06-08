@@ -16,7 +16,11 @@ class DuplexConnection extends EventEmitter {
     }
     connect(...args) {
         const cxns = Object.values(Modes).map((mode) => {
-            return this._conns[mode] = this._connect(...args);
+            return this._conns[mode] = this._connect(...args)
+                .then((conn) => {
+                    helpers.events.forward(conn, this, 'error', 'close');
+                    return conn;
+                });
         });
         return Promise.all(cxns).then(() => this);
     }
@@ -51,7 +55,7 @@ class DuplexChannel extends EventEmitter {
             .map((mode) => this._chs[mode] = this._create(mode));
         return Promise.all(open)
             .then((chs) => chs.map((ch) => {
-                helpers.events.forwardAll(this, ch, true);
+                helpers.events.forwardAll(this, ch, true, ['delivery', 'return']);
                 return ch;
             }))
             .then(([pubCh, subCh]) => {
