@@ -129,15 +129,16 @@ describe('direct', function() {
 
     it('should be allowed to reuse a queue already declared', function(done) {
         const check = (msg) => {
+            msg.ack();
             if (msg.content.toString() === '1') {
-                msg.ack(), confirmed.then(() => done());
+                confirmed.then(() => done());
             } else done(new Error(`Expected '1' but got ${msg.content.toString()}`));
         };
 
         const confirmed =
             (client = new Client('amqp://guest:guest@127.0.0.1:5672'))
             .start()
-            .then(() => client.queue('foo')) // assert the queue first.
+            .then(() => client.queue('foo', { exclusive: true })) // assert the queue first.
             .then(() => client
                 .assert(false)
                 .queue('foo')
