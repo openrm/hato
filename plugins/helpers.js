@@ -1,12 +1,28 @@
-const state = new WeakMap();
+const asyncHooks = require('async_hooks');
+const state = new Map();
+
+const breakLoop = function(name, fn) {
+    return function(...args) {
+        const asyncId = asyncHooks.executionAsyncId();
+        const events = state.get(asyncId) || [];
+        if (!events.includes(name)) {
+            state.set(asyncId, events.concat(name));
+            fn(...args);
+        }
+    };
+}
+
+const hook = asyncHooks.createHook({
+    init: (aid, type, tid) => {
+        if (state.has(tid)) state.set(aid, state.get(tid));
+    },
+    destroy: (aid) => state.delete(aid)
+});
 
 function forwardEvents(src, dst, ...events) {
-    events.forEach((name) => src.on(name, (...args) => {
-        if (state.has(dst) && state.get(dst).includes(name)) return;
-        state.set(src, (state.get(src) || []).concat(name));
-        dst.emit(name, ...args);
-        state.set(src, state.get(src).filter(_name => _name !== name));
-    }));
+    hook.enable(); // enabled only once even if called repeatedly.
+    events.forEach((name) =>
+        src.on(name, breakLoop(name, dst.emit.bind(dst, name))));
     return dst;
 }
 
