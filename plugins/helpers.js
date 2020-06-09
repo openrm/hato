@@ -13,7 +13,7 @@ const breakLoop = function(name, fn) {
 };
 
 const hook = asyncHooks.createHook({
-    init: (aid, type, tid) => {
+    init: (aid, _, tid) => {
         if (state.has(tid)) state.set(aid, state.get(tid));
     },
     destroy: (aid) => state.delete(aid)
