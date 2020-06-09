@@ -1,5 +1,28 @@
+const asyncHooks = require('async_hooks');
+const state = new Map();
+
+const breakLoop = function(name, fn) {
+    return function(...args) {
+        const asyncId = asyncHooks.executionAsyncId();
+        const events = state.get(asyncId) || [];
+        if (!events.includes(name)) {
+            state.set(asyncId, events.concat(name));
+            fn(...args);
+        }
+    };
+};
+
+const hook = asyncHooks.createHook({
+    init: (aid, _, tid) => {
+        if (state.has(tid)) state.set(aid, state.get(tid));
+    },
+    destroy: (aid) => state.delete(aid)
+});
+
 function forwardEvents(src, dst, ...events) {
-    events.forEach((name) => src.on(name, dst.emit.bind(dst)));
+    hook.enable(); // enabled only once even if called repeatedly.
+    events.forEach((name) =>
+        src.on(name, breakLoop(name, dst.emit.bind(dst, name))));
     return dst;
 }
 
