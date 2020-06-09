@@ -10,7 +10,7 @@ const breakLoop = function(name, fn) {
             fn(...args);
         }
     };
-}
+};
 
 const hook = asyncHooks.createHook({
     init: (aid, type, tid) => {
