@@ -30,9 +30,9 @@ module.exports = class extends Plugin {
             },
             [PUBLICATION]({ logger }) {
                 return (publish) => (exchange, routingKey, content, options, callback) => {
-                    if (Buffer.isBuffer(content)) return content;
                     switch (type) {
                     case 'json':
+                        if (Buffer.isBuffer(content)) content = content.toString();
                         try {
                             content = JSON.stringify(content);
                             options.contentType = 'application/json';
