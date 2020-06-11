@@ -8,7 +8,7 @@ const backoff = ({ initial }) => ({
 
 function createDelayFunc(options) {
     const {
-        min = 500,
+        min = 100,
         max = Infinity,
         strategy = 'exponential',
         ...strategyOptions

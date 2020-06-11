@@ -50,10 +50,10 @@ function retry(msg, count, delay = 500) {
 
 module.exports = class extends Plugin {
 
-    constructor(options = {}) {
+    constructor({ retries = 5, ...options } = {}) {
         super();
 
-        this.options = options;
+        this.options = { retries, ...options };
 
         this.wrappers = {
             [CHANNEL]() {
