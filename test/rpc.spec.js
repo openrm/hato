@@ -1,3 +1,4 @@
+const assert = require('assert');
 const { Client } = require('../index');
 const { RPC, Duplex, Encoding } = require('../plugins');
 
@@ -21,9 +22,9 @@ describe('rpc', function() {
 
         client.start()
             .then(() => client.rpc('rpc.1', { 1: 'message' }))
-            .then(answer => {
-                if (answer.content === 1) done();
-                else done(new Error(`Message does not match ${answer.content} vs. ${1})`));
+            .then((answer) => {
+                assert.strictEqual(answer.content, 1);
+                done();
             })
             .catch(done);
     });
@@ -44,13 +45,14 @@ describe('rpc', function() {
             msg.ack();
             const reply = await client.rpc('rpc.1', ++msg.content)
             return ++reply.content;
-        }).catch(done);
+        }).on('error', done)
+            .catch(done);
 
         client.start()
             .then(() => client.rpc('rpc.2', 0))
-            .then(answer => {
-                if (answer.content === 3) done();
-                else done(new Error(`Message does not match ${answer.content} vs. ${1})`));
+            .then((answer) => {
+                assert.strictEqual(answer.content, 3);
+                done();
             })
             .catch(done);
     });
@@ -70,9 +72,9 @@ describe('rpc', function() {
 
         client.start()
             .then(() => client.type('direct').rpc('rpc.1', { 1: 'message' }))
-            .then(answer => {
-                if (answer.content === 1) done();
-                else done(new Error(`Message does not match ${answer.content} vs. ${1})`));
+            .then((answer) => {
+                assert.strictEqual(answer.content, 1);
+                done();
             })
             .catch(done);
     });

@@ -1,3 +1,4 @@
+const assert = require('assert');
 const { Client, errors: { TimeoutError } } = require('../..');
 const RPC = require('../rpc');
 
@@ -21,8 +22,8 @@ describe('rpc plugin', () => {
             .then(() => client.rpc('rpc.1', Buffer.from('hello'), { timeout: 10 }))
             .then(() => done(new Error('RPC call should fail')))
             .catch((err) => {
-                if (err instanceof TimeoutError) done();
-                else done(err);
+                assert.ok(err instanceof TimeoutError);
+                done();
             });
     });
 

@@ -1,3 +1,4 @@
+const assert = require('assert');
 const { Client, constants: { Scopes } } = require('..');
 const ServiceContext = require('./service');
 
@@ -16,13 +17,12 @@ describe('service-context plugin', () => {
     });
     it('injects specified service context into client properties', (done) => {
         const fn = function(url, options) {
-            if (options.clientProperties &&
-                options.clientProperties['service.name'] === 'test-client' &&
-                options.clientProperties['service.version'] === '0.0.1' &&
-                options.clientProperties['service.instance.id'] === '1234' &&
-                options.clientProperties['service.namespace'] === 'development') {
-                done();
-            } else done(new Error(`Wrong options returned: ${JSON.stringify(options)}`));
+            const properties = options.clientProperties;
+            assert.strictEqual(properties['service.name'], 'test-client');
+            assert.strictEqual(properties['service.version'], '0.0.1');
+            assert.strictEqual(properties['service.instance.id'], '1234');
+            assert.strictEqual(properties['service.namespace'], 'development');
+            done();
         };
         plugin.wrap(Scopes.CONNECTION)(fn)('', {});
     });
@@ -34,13 +34,10 @@ describe('service-context plugin', () => {
                     .then((ch) => {
                         const original = ch.assertQueue;
                         ch.assertQueue = function(name, options) {
-                            if (name === 'test-client:foo:amq.topic' &&
-                                !options.durable && options.exclusive) {
-                                done();
-                            } else {
-                                done(new Error(`Got wrong queue attributes: name: ${name
-                                } options: ${JSON.stringify(options)}`));
-                            }
+                            assert.strictEqual(name, 'test-client:foo:amq.topic');
+                            assert.strictEqual(options.durable, false);
+                            assert.strictEqual(options.exclusive, true);
+                            done();
                             return original.apply(this, arguments);
                         };
                         return ch;
@@ -48,7 +45,9 @@ describe('service-context plugin', () => {
                     .catch(done);
             }
         };
-        const client = new Client('amqp://guest:guest@127.0.0.1:5672', { plugins: [plugin, testQueue] });
+        const client = new Client('amqp://guest:guest@127.0.0.1:5672', {
+            plugins: [plugin, testQueue]
+        });
         client.type('topic').subscribe('foo', () => {});
         client.start().catch(done);
     });
