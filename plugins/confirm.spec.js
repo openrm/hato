@@ -4,13 +4,11 @@ const Confirm = require('./confirm');
 describe('confirm plugin', () => {
     let client;
 
-    beforeEach(() => {
-        return new Client('amqp://guest:guest@127.0.0.1:5672', {
-            plugins: [new Confirm()]
-        })
-            .start()
-            .then((cli) => client = cli);
-    });
+    beforeEach(() => new Client('amqp://guest:guest@127.0.0.1:5672', {
+        plugins: [new Confirm()]
+    })
+        .start()
+        .then((cli) => client = cli));
 
     afterEach(() => client.close());
 

@@ -56,8 +56,7 @@ module.exports = {
             if (src[member] === undefined) return;
             if (typeof src[member] === 'function') {
                 dst[member] = src[member].bind(src);
-            }
-            else dst[member] = src[member];
+            } else dst[member] = src[member];
         });
         return dst;
     }

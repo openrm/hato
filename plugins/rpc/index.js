@@ -13,7 +13,7 @@ module.exports = class RPCPlugin extends Plugin {
 
             [Scopes.CHANNEL]: this.replyOnNack,
 
-            [Scopes.API]: require('./api')({ uid, timeout }),
+            [Scopes.API]: require('./api')({ uid, timeout })
 
         };
     }

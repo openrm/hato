@@ -5,15 +5,12 @@ const Keys = {
     error: 'x-rpc-error'
 };
 
-const parse = (msg) => {
-    return new Promise((resolve, reject) => {
-        if (MessageError.is(msg)) {
-            const deserialized = JSON.parse(msg.content.toString());
-            reject(new MessageError(deserialized, msg));
-        }
-        else resolve(msg);
-    });
-};
+const parse = (msg) => new Promise((resolve, reject) => {
+    if (MessageError.is(msg)) {
+        const deserialized = JSON.parse(msg.content.toString());
+        reject(new MessageError(deserialized, msg));
+    } else resolve(msg);
+});
 
 const extractHeaders = (err) =>
     err.originalHeaders[Keys.originalHeaders] || err.originalHeaders;

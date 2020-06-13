@@ -30,7 +30,7 @@ describe('graceful plugin', () => {
             .then(() => Promise.race([process.emit('SIGTERM'), process.emit('SIGINT')]))
             .then(() => {
                 if (count === 1) done();
-                else done(new Error('Called count should equal 1 but got ' + count));
+                else done(new Error(`Called count should equal 1 but got ${count}`));
             });
     });
 });

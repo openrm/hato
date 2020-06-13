@@ -15,13 +15,11 @@ class DuplexConnection extends EventEmitter {
         this._connect = connect;
     }
     connect(...args) {
-        const cxns = Object.values(Modes).map((mode) => {
-            return this._conns[mode] = this._connect(...args)
-                .then((conn) => {
-                    helpers.events.forward(conn, this, 'error', 'close');
-                    return conn;
-                });
-        });
+        const cxns = Object.values(Modes).map((mode) => this._conns[mode] = this._connect(...args)
+            .then((conn) => {
+                helpers.events.forward(conn, this, 'error', 'close');
+                return conn;
+            }));
         return Promise.all(cxns).then(() => this);
     }
     _createChannel(confirm, mode) {

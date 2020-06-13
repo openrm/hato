@@ -40,7 +40,8 @@ describe('conn-retry plugin', () => {
 
         retried().then(() => {
             done(new Error('Connection should always fail'));
-        }).catch(done);
+        })
+            .catch(done);
 
         setTimeout(() => {
             if (count === 2) done();

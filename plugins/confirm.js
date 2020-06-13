@@ -18,17 +18,15 @@ module.exports = class extends Plugin {
     }
 
     handleBounced() {
-        return (create) => () => {
-            return create()
-                .then((ch) => {
-                    ch.on('return', (msg) => {
-                        if (msg.properties.messageId) {
-                            this._failed.emit(msg.properties.messageId, msg);
-                        }
-                    });
-                    return ch;
+        return (create) => () => create()
+            .then((ch) => {
+                ch.on('return', (msg) => {
+                    if (msg.properties.messageId) {
+                        this._failed.emit(msg.properties.messageId, msg);
+                    }
                 });
-        };
+                return ch;
+            });
     }
 
     mandate() {

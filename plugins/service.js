@@ -14,12 +14,10 @@ const setContext = (properties, service) => {
 };
 
 const associateContext = (service) => (connect) =>
-    (url, { clientProperties = {}, ...socketOptions } = {}) => {
-        return connect(url, {
-            clientProperties: setContext(clientProperties, service),
-            ...socketOptions
-        });
-    };
+    (url, { clientProperties = {}, ...socketOptions } = {}) => connect(url, {
+        clientProperties: setContext(clientProperties, service),
+        ...socketOptions
+    });
 
 const serializeHeaders = (headers) => Object
     .entries(headers)

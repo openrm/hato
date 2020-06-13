@@ -16,14 +16,12 @@ const { RetryError } = errors;
 function assertDelayQueue(delay, exchange) {
     const { name, options } = configs.queue({ delay, exchange });
     const { name: ex } = configs.exchange();
-    return (ch) => {
-        return ch
-            .assertQueue(name, options)
-            .then(({ queue }) => ch
-                .bindQueue(queue, ex, '', context.inject(delay, exchange)({
-                    'x-match': 'all'
-                })));
-    };
+    return (ch) => ch
+        .assertQueue(name, options)
+        .then(({ queue }) => ch
+            .bindQueue(queue, ex, '', context.inject(delay, exchange)({
+                'x-match': 'all'
+            })));
 }
 
 /** @this {ContextChannel} */
@@ -40,12 +38,10 @@ function retry(msg, count, delay = 500) {
     };
     return this._asserted()
         .then(assertDelayQueue(delay, exchange))
-        .then(() => {
-            return this
-                .exchange(delayExchange)
-                .publish(routingKey, msg.content, options)
-                .then(msg.ack);
-        });
+        .then(() => this
+            .exchange(delayExchange)
+            .publish(routingKey, msg.content, options)
+            .then(msg.ack));
 }
 
 module.exports = class extends Plugin {

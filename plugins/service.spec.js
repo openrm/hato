@@ -16,11 +16,11 @@ describe('service-context plugin', () => {
     });
     it('injects specified service context into client properties', (done) => {
         const fn = function(url, options) {
-            if (options.clientProperties
-                && options.clientProperties['service.name'] === 'test-client'
-                && options.clientProperties['service.version'] === '0.0.1'
-                && options.clientProperties['service.instance.id'] === '1234'
-                && options.clientProperties['service.namespace'] === 'development') {
+            if (options.clientProperties &&
+                options.clientProperties['service.name'] === 'test-client' &&
+                options.clientProperties['service.version'] === '0.0.1' &&
+                options.clientProperties['service.instance.id'] === '1234' &&
+                options.clientProperties['service.namespace'] === 'development') {
                 done();
             } else done(new Error(`Wrong options returned: ${JSON.stringify(options)}`));
         };
@@ -34,17 +34,18 @@ describe('service-context plugin', () => {
                     .then((ch) => {
                         const original = ch.assertQueue;
                         ch.assertQueue = function(name, options) {
-                            if (name === 'test-client:foo:amq.topic'
-                                && !options.durable && options.exclusive) {
+                            if (name === 'test-client:foo:amq.topic' &&
+                                !options.durable && options.exclusive) {
                                 done();
                             } else {
-                                done(new Error('Got wrong queue attributes: name: ' + name +
-                                    ' options: ' + JSON.stringify(options)));
+                                done(new Error(`Got wrong queue attributes: name: ${name
+                                } options: ${JSON.stringify(options)}`));
                             }
                             return original.apply(this, arguments);
                         };
                         return ch;
-                    }).catch(done);
+                    })
+                    .catch(done);
             }
         };
         const client = new Client('amqp://guest:guest@127.0.0.1:5672', { plugins: [plugin, testQueue] });

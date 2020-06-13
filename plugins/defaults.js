@@ -3,17 +3,15 @@ const { Scopes } = require('../lib/constants');
 
 const isObject = (v) => v !== null && typeof v === 'object';
 
-const setDefaults = (options = {}, defaults) => {
-    return Object.keys(options)
-        .reduce((acc, key) => {
-            if (isObject(acc[key]) && isObject(options[key])) {
-                return Object.assign(acc, {
-                    [key]: setDefaults(options[key], acc[key])
-                });
-            }
-            return Object.assign(acc, { [key]: options[key] });
-        }, { ...defaults });
-};
+const setDefaults = (options = {}, defaults) => Object.keys(options)
+    .reduce((acc, key) => {
+        if (isObject(acc[key]) && isObject(options[key])) {
+            return Object.assign(acc, {
+                [key]: setDefaults(options[key], acc[key])
+            });
+        }
+        return Object.assign(acc, { [key]: options[key] });
+    }, { ...defaults });
 
 const wrap = function(ch, name, pos, defaults) {
     const original = ch[name];
@@ -28,16 +26,14 @@ module.exports = class DefaultOptions extends Plugin {
     constructor({ exchange = {}, queue = {}, consume = {}, publish = {} } = {}) {
         super();
         this.wrappers = {
-            [Scopes.CHANNEL]: () => (create) => () => {
-                return create()
-                    .then((ch) => {
-                        wrap(ch, 'assertQueue', 1, queue);
-                        wrap(ch, 'assertExchange', 2, exchange);
-                        wrap(ch, 'consume', 2, consume);
-                        wrap(ch, 'publish', 3, publish);
-                        return ch;
-                    });
-            }
+            [Scopes.CHANNEL]: () => (create) => () => create()
+                .then((ch) => {
+                    wrap(ch, 'assertQueue', 1, queue);
+                    wrap(ch, 'assertExchange', 2, exchange);
+                    wrap(ch, 'consume', 2, consume);
+                    wrap(ch, 'publish', 3, publish);
+                    return ch;
+                })
         };
     }
 

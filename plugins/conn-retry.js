@@ -43,7 +43,8 @@ module.exports = class extends Plugin {
 
                         return new Promise((resolve, reject) => {
                             const timer = setTimeout(() =>
-                                retryable(c + 1, ...args).then(resolve).catch(reject), wait);
+                                retryable(c + 1, ...args).then(resolve)
+                                    .catch(reject), wait);
                             this.timeouts.push(timer);
                         });
                     });
@@ -54,7 +55,7 @@ module.exports = class extends Plugin {
     }
 
     destroy() {
-        this.timeouts.forEach(timer => clearTimeout(timer));
+        this.timeouts.forEach((timer) => clearTimeout(timer));
     }
 
 };
