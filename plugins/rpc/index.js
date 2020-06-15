@@ -7,19 +7,19 @@ const Puid = require('puid');
 module.exports = class RPCPlugin extends Plugin {
 
     constructor({ uid = new Puid(), timeout = 0 } = {}) {
-        super();
+        super('rpc');
 
-        this.wrappers = {
-
-            [Scopes.CHANNEL]: this.replyOnNack,
-
-            [Scopes.API]: require('./api')({ uid, timeout })
-
-        };
+        this.options = { uid, timeout };
     }
 
-    replyOnNack({ logger }) {
-        return (create) => () => create()
+    init() {
+        this.scopes[Scopes.CHANNEL] = this.replyOnNack;
+
+        this.scopes[Scopes.API] = require('./api')(this.options);
+    }
+
+    replyOnNack(create) {
+        return () => create()
             .then((ch) => {
                 const nack = ch.nack;
                 ch.nack = function(msg, multiple, requeue, err) {
@@ -37,7 +37,7 @@ module.exports = class RPCPlugin extends Plugin {
                         ch.publish(
                             '', replyTo, content, { ...options, headers, correlationId });
                     } catch (err) {
-                        logger.error(
+                        this.logger.error(
                             '[AMQP:rpc] Failed to report the error back to client.',
                             err);
                     }

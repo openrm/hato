@@ -9,9 +9,9 @@ const connect = () => Promise.resolve(conn);
 
 describe('graceful plugin', () => {
     it('terminates a connection on process kill', (done) => {
-        const plugin = new GracefulShutdown();
+        const plugin = new GracefulShutdown().enable();
         const wrapped = plugin
-            .wrap(Scopes.CONNECTION, { logger: console })(connect);
+            .install(Scopes.CONNECTION)(connect);
         conn.close = () => {
             done();
             return Promise.resolve();
@@ -20,9 +20,9 @@ describe('graceful plugin', () => {
     });
 
     it('tries to close the connection only once', (done) => {
-        const plugin = new GracefulShutdown();
+        const plugin = new GracefulShutdown().enable();
         const wrapped = plugin
-            .wrap(Scopes.CONNECTION, { logger: console })(connect);
+            .install(Scopes.CONNECTION)(connect);
         let count = 0;
         conn.close = () => {
             count++;

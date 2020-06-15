@@ -12,6 +12,10 @@ const { RetryError } = errors;
 /**
  * @typedef {import('../../lib/api')} ContextChannel
  */
+/**
+ * @template T
+ * @typedef {{ new(...args: any): T }} ConstructorOf
+ */
 
 function assertDelayQueue(delay, exchange) {
     const { name, options } = configs.queue({ delay, exchange });
@@ -47,38 +51,38 @@ function retry(msg, count, delay = 500) {
 module.exports = class extends Plugin {
 
     constructor({ retries = 5, ...options } = {}) {
-        super();
+        super('retry');
 
         this.options = { retries, ...options };
-
-        this.wrappers = {
-            [CHANNEL]() {
-                return (create) => () =>
-                    create()
-                        .then((ch) => {
-                            const { name, type, options } =
-                                configs.exchange();
-                            return ch.assertExchange(name, type, options)
-                                .then(() => ch);
-                        });
-            },
-            [API]: () => this.handlePubsub.bind(this)
-        };
     }
 
-    handlePubsub(constructor) {
-        const globalOptions = this.options;
+    init() {
+        this.scopes[CHANNEL] = (create) => () =>
+            create()
+                .then((ch) => {
+                    const { name, type, options } =
+                        configs.exchange();
+                    return ch.assertExchange(name, type, options)
+                        .then(() => ch);
+                });
 
-        return class extends constructor {
+        this.scopes[API] = this.handlePubsub();
+    }
+
+    /** @return {(original: ConstructorOf<ContextChannel>) => ConstructorOf<ContextChannel>} */
+    handlePubsub() {
+        const plugin = this;
+
+        return (constructor) => class extends constructor {
 
             consume(queue, fn, {
-                retries = globalOptions.retries,
+                retries = plugin.options.retries,
                 retry: localOptions = {},
                 ...options
             } = {}) {
-                retries = retries >= 0 ? retries : globalOptions.retries;
+                retries = retries >= 0 ? retries : plugin.options.retries;
 
-                const computeDelay = backoff({ ...globalOptions, ...localOptions });
+                const computeDelay = backoff({ ...plugin.options, ...localOptions });
 
                 const handler = (msg) => {
                     const count = context.count(msg.properties.headers);

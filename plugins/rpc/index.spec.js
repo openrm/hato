@@ -12,7 +12,7 @@ describe('rpc plugin', () => {
     }).start()
         .then((cli) => client = cli));
 
-    afterEach(() => client.close());
+    afterEach(() => client && client.close());
 
     it('should timeout after specified duration', (done) => {
         client

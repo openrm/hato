@@ -17,7 +17,7 @@ describe('retry plugin', () => {
         .start()
         .then((cli) => client = cli));
 
-    afterEach(() => client.close());
+    afterEach(() => client && client.close());
 
     it('should retry until it reaches the limit', (done) => {
         let failed = 0;

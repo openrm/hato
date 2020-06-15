@@ -8,21 +8,24 @@ const Puid = require('puid');
 module.exports = class extends Plugin {
 
     constructor({ uid = new Puid() } = {}) {
-        super();
+        super('confirm');
+
         this.uid = uid;
         this._failed = new EventEmitter();
-        this.wrappers = {
-            [CHANNEL]: this.handleBounced.bind(this),
-            [PUBLICATION]: this.mandate.bind(this)
-        };
+    }
+
+    init() {
+        this.scopes[CHANNEL] = this.handleBounced();
+        this.scopes[PUBLICATION] = this.mandate();
     }
 
     handleBounced() {
+        const plugin = this;
         return (create) => () => create()
             .then((ch) => {
                 ch.on('return', (msg) => {
                     if (msg.properties.messageId) {
-                        this._failed.emit(msg.properties.messageId, msg);
+                        plugin._failed.emit(msg.properties.messageId, msg);
                     }
                 });
                 return ch;
@@ -30,12 +33,13 @@ module.exports = class extends Plugin {
     }
 
     mandate() {
+        const plugin = this;
         return (publish) =>
             (ex, key, content, options, cb) => {
                 const {
                     mandatory,
                     immediate,
-                    messageId = this.uid.generate()
+                    messageId = plugin.uid.generate()
                 } = options;
                 if (mandatory || immediate) {
                     // `immediate` option is not implemented on RabbitMQ
@@ -45,9 +49,9 @@ module.exports = class extends Plugin {
                         // this works since basic.return's are sent before basic.ack's
                         // c.f. https://www.rabbitmq.com/confirms.html#when-publishes-are-confirmed
                         cb(err);
-                        this._failed.removeListener(messageId, listener);
+                        plugin._failed.removeListener(messageId, listener);
                     };
-                    this._failed.on(messageId, listener);
+                    plugin._failed.on(messageId, listener);
                 }
                 return publish(ex, key, content, { ...options, messageId }, cb);
             };
