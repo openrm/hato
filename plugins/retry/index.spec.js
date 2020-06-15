@@ -30,7 +30,6 @@ describe('retry plugin', () => {
                     done();
                 }
             }, { retry: { strategy: 'exponential', base: 1.5 } })
-            .on('error', done)
             .then(() => client
                 .publish('it.fails', Buffer.from('hello')))
             .catch(done);
