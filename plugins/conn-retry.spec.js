@@ -1,3 +1,4 @@
+const assert = require('assert');
 const { constants: { Scopes } } = require('..');
 const ConnectionRetry = require('./conn-retry');
 
@@ -10,7 +11,8 @@ describe('conn-retry plugin', () => {
 
         let count = 0;
         const connect = () => new Promise((resolve, reject) => {
-            count++, setImmediate(() => reject(thrown));
+            count++;
+            setImmediate(() => reject(thrown));
         });
 
         const retried = plugin
@@ -18,9 +20,11 @@ describe('conn-retry plugin', () => {
 
         retried()
             .catch((err) => {
-                if (count === 3 && err === thrown) done();
-                else done(err);
-            });
+                assert.strictEqual(count, 3);
+                assert.strictEqual(err, thrown);
+                done();
+            })
+            .catch(done);
     });
 
     it('should abort retries when told so', (done) => {
@@ -38,14 +42,15 @@ describe('conn-retry plugin', () => {
         const retried = plugin
             .wrap(Scopes.CONNECTION, ctx)(connect);
 
-        retried().then(() => {
-            done(new Error('Connection should always fail'));
-        })
+        retried()
+            .then(() => {
+                done(new Error('Connection should always fail'));
+            })
             .catch(done);
 
         setTimeout(() => {
-            if (count === 2) done();
-            else done(new Error('Attempted after it was aborted'));
+            assert.strictEqual(count, 2);
+            done();
         }, 30);
     });
 });

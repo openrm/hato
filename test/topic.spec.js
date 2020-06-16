@@ -1,3 +1,4 @@
+const assert = require('assert');
 const { Client } = require('../index');
 
 describe('topic', function() {
@@ -5,54 +6,56 @@ describe('topic', function() {
     afterEach(() => client.close());
 
     it('should receive a basic publish', function(done) {
-        client = new Client('amqp://guest:guest@127.0.0.1:5672', {
-            logger: console
-        });
+        client = new Client();
+
+        const MSG = { 1: 'message' };
 
         client.type('topic')
-            .subscribe('routing.key.#', (msg) => {
+            .subscribe('routing.key.#', async(msg) => {
                 const content = JSON.parse(Buffer.from(msg.content).toString());
 
                 msg.ack();
 
-                if (content[1] === 'message') {
-                    confirmed.then(() => done());
-                } else {
-                    done(new Error("Message not carried properly"));
-                }
+                assert.deepStrictEqual(content, MSG);
+
+                await confirmed;
+                done();
             })
+            .on('error', done)
             .catch(done);
 
         const confirmed = client.start()
             .then(() => client.type('topic')
-                .publish('routing.key.1', Buffer.from(JSON.stringify({ 1: 'message' }))))
+                .publish('routing.key.1', Buffer.from(JSON.stringify(MSG))))
             .catch(done);
 
     });
 
 
     it('should be able to use wildcard routing key on topic exchange', function(done) {
-        client = new Client('amqp://guest:guest@127.0.0.1:5672', {
-            logger: console
-        });
+        client = new Client();
 
         let calls = 0;
 
         function process(counter) {
-            return (msg) => {
+            return async(msg) => {
                 calls += counter;
                 msg.ack();
 
-                if (calls === 2) {
-                    confirmed.then(() => done());
-                } else if (calls === 3) {
-                    done(new Error("Message received more than twice"));
-                }
+                if (calls === 1) return;
+
+                assert.ok(calls < 3, 'Message received more than twice');
+                assert.strictEqual(calls, 2);
+
+                await confirmed;
+                done();
             };
         };
 
         client.type('topic')
-            .subscribe('routing.key.#', process(1)).catch(done);
+            .subscribe('routing.key.#', process(1))
+            .on('error', done)
+            .catch(done);
 
 
         const confirmed = client.start()
@@ -63,31 +66,38 @@ describe('topic', function() {
 
 
     it('should be able to create multiple subscribers to receive a single publish', function(done) {
-        client = new Client('amqp://guest:guest@127.0.0.1:5672', {
-            logger: console
-        });
+        client = new Client();
 
         let calls = 0;
 
         function process(counter) {
-            return (msg) => {
+            return async(msg) => {
                 calls += counter;
                 msg.ack();
 
-                if (calls === 4) {
-                    confirmed.then(() => done());
-                } else if (calls === 2) {
-                    done(new Error("Message received twice on the first subscriber"));
-                } else if (calls === 6) {
-                    done(new Error("Message received twice on the second subscriber"));
-                }
+                if (calls % 2 === 1) return;
+
+                assert.ok([2, 4, 6].includes(calls),
+                    'Subscriber received an unexpected message');
+                assert.notStrictEqual(calls, 2,
+                    'Message received twice on the first subscriber');
+                assert.notStrictEqual(calls, 6,
+                    'Message received twice on the second subscriber');
+                assert.strictEqual(calls, 4);
+
+                await confirmed;
+                done();
             };
         };
 
         client.type('topic')
-            .subscribe('routing.#', process(1)).catch(done);
+            .subscribe('routing.#', process(1))
+            .on('error', done)
+            .catch(done);
         client.type('topic')
-            .subscribe('routing.key.#', process(3)).catch(done);
+            .subscribe('routing.key.#', process(3))
+            .on('error', done)
+            .catch(done);
 
 
         const confirmed = client.start()

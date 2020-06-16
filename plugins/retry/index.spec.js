@@ -1,4 +1,6 @@
+const assert = require('assert');
 const { Client } = require('../..');
+const { MessageError } = require('../../lib/errors');
 const Retry = require('.');
 const RPC = require('../rpc');
 
@@ -21,12 +23,14 @@ describe('retry plugin', () => {
         let failed = 0;
         client
             .subscribe('it.fails', (msg) => {
-                if (msg.content.toString() !== 'hello') {
-                    done(new Error('Message does not match'));
-                }
+                assert.strictEqual(msg.content.toString(), 'hello');
                 if (failed++ < retries) throw 'fail!';
-                else if (failed > 0) done();
+                else {
+                    assert.ok(failed > 0);
+                    done();
+                }
             }, { retry: { strategy: 'exponential', base: 1.5 } })
+            .on('error', done)
             .then(() => client
                 .publish('it.fails', Buffer.from('hello')))
             .catch(done);
@@ -38,12 +42,10 @@ describe('retry plugin', () => {
                 throw 'error!';
             })
             .then(() => client.rpc('rpc.1', Buffer.from('hello')))
-            .then(() => {
-                done(new Error('RPC call should fail'));
-            })
+            .then(() => done(new Error('RPC call should fail')))
             .catch((err) => {
-                if (err.message === 'error!') done();
-                else done(new Error('Returned error does not match'));
+                assert.strictEqual(err.message, 'error!');
+                done();
             });
     });
 
@@ -61,11 +63,18 @@ describe('retry plugin', () => {
             .then(() => client.rpc('rpc.4', Buffer.from('hello')))
             .then(() => done(new Error('RPC call should fail')))
             .catch((err) => {
+                assert.ok(err instanceof MessageError);
+                assert.strictEqual(err.message, 'error!');
+
                 const headers = err.msg.properties.headers;
-                if (err.message === 'error!' &&
-                    !('x-retry-count' in headers) &&
-                    headers['x-rpc-original-headers']['x-retry-count'] === retries) done();
-                else done(new Error('Returned error does not match'));
+                assert.ok(!('x-retry-count' in headers));
+
+                assert.ok('x-rpc-original-headers' in err.originalHeaders);
+                assert.strictEqual(
+                    err.originalHeaders['x-rpc-original-headers']['x-retry-count'],
+                    retries);
+
+                done();
             })
             .catch(done);
     });

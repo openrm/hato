@@ -1,5 +1,7 @@
-const { constants: { Scopes } } = require('..');
+const assert = require('assert');
 const { EventEmitter } = require('events');
+
+const { constants: { Scopes } } = require('..');
 const GracefulShutdown = require('./graceful');
 
 const conn = new EventEmitter();
@@ -29,8 +31,8 @@ describe('graceful plugin', () => {
         wrapped()
             .then(() => Promise.race([process.emit('SIGTERM'), process.emit('SIGINT')]))
             .then(() => {
-                if (count === 1) done();
-                else done(new Error(`Called count should equal 1 but got ${count}`));
+                assert.strictEqual(count, 1);
+                done();
             });
     });
 });
