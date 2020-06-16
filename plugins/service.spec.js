@@ -24,13 +24,13 @@ describe('service-context plugin', () => {
             assert.strictEqual(properties['service.namespace'], 'development');
             done();
         };
-        plugin.wrap(Scopes.CONNECTION)(fn)('', {});
+        plugin.enable();
+        plugin.install(Scopes.CONNECTION)(fn)('', {});
     });
     it('names queues automatically in a microservices context', (done) => {
         const testQueue = {
-            scopes: [Scopes.CHANNEL],
-            wrap() {
-                return (create) => () => create()
+            scopes: {
+                [Scopes.CHANNEL]: (create) => () => create()
                     .then((ch) => {
                         const original = ch.assertQueue;
                         ch.assertQueue = function(name, options) {
@@ -42,7 +42,11 @@ describe('service-context plugin', () => {
                         };
                         return ch;
                     })
-                    .catch(done);
+                    .catch(done)
+            },
+            enable() {},
+            install() {
+                return this.scopes[Scopes.CHANNEL];
             }
         };
         const client = new Client('amqp://guest:guest@127.0.0.1:5672', {

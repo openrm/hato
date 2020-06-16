@@ -10,34 +10,31 @@ const createBackoff = ({
 module.exports = class extends Plugin {
 
     constructor(options = {}) {
-        super();
+        super('conn-retry');
 
         this.options = options;
         this.timeouts = [];
-
-        const attempt = ({ logger }) => {
-            const { retries = 5 } = this.options;
-            const backoff = createBackoff(this.options);
-
-            return this.retry({ retries, backoff, logger });
-        };
-
-        this.wrappers = {
-            [CONNECTION]: attempt
-        };
     }
 
-    retry({ retries, backoff, logger }) {
+    init() {
+        const { retries = 5 } = this.options;
+        const backoff = createBackoff(this.options);
+
+        this.scopes[CONNECTION] = this.retry(retries, backoff);
+    }
+
+    retry(retries, backoff) {
         return (connect) => {
             const retryable = (c, ...args) => {
-                if (0 < c) logger.debug('[AMQP:conn-retry] Retrying to connect...');
+                if (0 < c) this.logger.debug(
+                    '[AMQP:conn-retry] Retrying to connect...');
 
                 return connect(...args)
                     .catch((err) => {
                         if (c + 1 >= retries) throw err;
 
                         const wait = backoff(c);
-                        logger.warn(
+                        this.logger.warn(
                             `[AMQP:conn-retry] Connection failed. Retrying in ${wait}ms...`,
                             err.message);
 

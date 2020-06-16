@@ -48,22 +48,24 @@ module.exports = class ServiceContext extends Plugin {
      */
     /** @param {ServiceContextConfig} config */
     constructor({ queue = {}, ...service } = {}) {
-        super();
+        super('service');
+        this.defaultOptions = queue.options;
+        this.service = service;
+    }
 
-        const defaultOptions = queue.options;
-        this.wrappers = {
-            [Scopes.CONNECTION]: () => associateContext(service),
-            [Scopes.API]: () => (base) => class extends base {
-                consume(binding, fn, options) {
-                    const { queue, exchange } = this._validateContext();
-                    if (queue) return super.consume.apply(this, arguments);
-                    return this
-                        .queue(queueName(binding, exchange, service), {
-                            durable: true,
-                            ...defaultOptions
-                        })
-                        .consume(binding, fn, options);
-                }
+    init() {
+        const plugin = this;
+        this.scopes[Scopes.CONNECTION] = associateContext(plugin.service);
+        this.scopes[Scopes.API] = (base) => class extends base {
+            consume(binding, fn, options) {
+                const { queue, exchange } = this._validateContext();
+                if (queue) return super.consume.call(this, binding, fn, options);
+                return this
+                    .queue(queueName(binding, exchange, plugin.service), {
+                        durable: true,
+                        ...plugin.defaultOptions
+                    })
+                    .consume(binding, fn, options);
             }
         };
     }

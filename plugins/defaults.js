@@ -24,17 +24,21 @@ const wrap = function(ch, name, pos, defaults) {
 module.exports = class DefaultOptions extends Plugin {
 
     constructor({ exchange = {}, queue = {}, consume = {}, publish = {} } = {}) {
-        super();
-        this.wrappers = {
-            [Scopes.CHANNEL]: () => (create) => () => create()
+        super('defaults');
+        this.options = { exchange, queue, consume, publish };
+    }
+
+    init() {
+        const { exchange, queue, consume, publish } = this.options;
+        this.scopes[Scopes.CHANNEL] = (create) => () =>
+            create()
                 .then((ch) => {
                     wrap(ch, 'assertQueue', 1, queue);
                     wrap(ch, 'assertExchange', 2, exchange);
                     wrap(ch, 'consume', 2, consume);
                     wrap(ch, 'publish', 3, publish);
                     return ch;
-                })
-        };
+                });
     }
 
 };
