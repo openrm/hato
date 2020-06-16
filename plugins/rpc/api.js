@@ -61,13 +61,10 @@ function reply(fn) {
 
         return promise
             .wrap(() => fn(msg))
-            .then((res) => {
-                if (res instanceof Error) return res;
-                return this._asserted()
-                    .then((ch) =>
-                        ch.publish('', replyTo, res, { correlationId }))
-                    .then(() => msg.ack());
-            });
+            .then((res) => this._asserted()
+                .then((ch) =>
+                    ch.publish('', replyTo, res, { correlationId }))
+                .then(() => msg.ack()));
     };
 }
 
