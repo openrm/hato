@@ -1,5 +1,4 @@
 const Plugin = require('../base');
-const { promise } = require('../helpers');
 const { Scopes: { API, CHANNEL } } = require('../../lib/constants');
 
 const backoff = require('./backoff');
@@ -84,24 +83,20 @@ module.exports = class extends Plugin {
 
                 const computeDelay = backoff({ ...plugin.options, ...localOptions });
 
-                const handler = (msg) => {
+                const handler = (err, msg) => {
                     const count = context.count(msg.properties.headers);
 
-                    const retryable = (err) =>
+                    const retryable =
                         count < retries && errors.isRetryable(err) && !RetryError.is(msg);
 
-                    return promise
-                        .wrap(() => fn(msg))
-                        .catch((err) => {
-                            retryable(err) ?
-                                retry.call(this, msg, count + 1, computeDelay(count)) :
-                                msg.nack(false, false, new RetryError(err, msg));
-                            return err instanceof Error ?
-                                err : new Error(err.toString());
-                        });
+                    retryable ?
+                        retry.call(this, msg, count + 1, computeDelay(count)) :
+                        msg.nack(false, false, new RetryError(err, msg));
+                    return err instanceof Error ?
+                        err : new Error(err.toString());
                 };
 
-                return super.consume(queue, handler, options);
+                return super.consume(queue, fn, options).on('error', handler);
             }
 
         };
