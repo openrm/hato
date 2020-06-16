@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 const { EventEmitter } = require('events');
 const Plugin = require('./base');
 const helpers = require('./helpers');
@@ -96,17 +98,13 @@ class DuplexChannel extends EventEmitter {
 module.exports = class extends Plugin {
 
     constructor() {
-        super();
+        super('duplex');
+    }
 
-        this.wrappers = {
-
-            [Scopes.CONNECTION]() {
-                return (connect) => {
-                    const duplex = new DuplexConnection(connect);
-                    return duplex.connect.bind(duplex);
-                };
-            }
-
+    init() {
+        this.scopes[Scopes.CONNECTION] = (connect) => {
+            const duplex = new DuplexConnection(connect);
+            return duplex.connect.bind(duplex);
         };
     }
 

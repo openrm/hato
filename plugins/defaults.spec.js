@@ -28,7 +28,7 @@ describe('defaults plugin', () => {
         }
     };
 
-    const plugin = new DefaultOptions(defaults);
+    const plugin = new DefaultOptions(defaults).enable();
 
     const createChannel = (defs = defaults) => Promise.resolve({
         assertQueue(queue, options) {
@@ -46,7 +46,7 @@ describe('defaults plugin', () => {
     });
 
     it('should ensure default options', (done) => {
-        const wrapped = plugin.wrap(Scopes.CHANNEL)(createChannel);
+        const wrapped = plugin.install(Scopes.CHANNEL)(createChannel);
         wrapped()
             .then((ch) => {
                 ch.assertQueue('a.queue');
@@ -71,7 +71,7 @@ describe('defaults plugin', () => {
                 }
             }
         });
-        const wrapped = plugin.wrap(Scopes.CHANNEL)(testCreate);
+        const wrapped = plugin.install(Scopes.CHANNEL)(testCreate);
         wrapped()
             .then((ch) => {
                 ch.assertQueue('a.queue', {

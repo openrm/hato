@@ -112,25 +112,28 @@ function makeRpc(routingKey, msg, { timeout, ...options }) {
 }
 
 /**
+ * @template T
+ * @typedef {{ new(...args: any): T }} ConstructorOf
+ */
+/**
  * @param {{ uid: { generate: () => string }, timeout: number }} config
+ * @return {(original: ConstructorOf<ContextChannel>) => ConstructorOf<RPCChannel>}
  * */
 module.exports = function(config) {
-    return () =>
-        /**
-         * @param {{ new(ctx: object | null, fields: any): ContextChannel }} constructor
-         */
-        (constructor) =>
-            class RPCChannel extends constructor {
-                constructor(ctx, fields) {
-                    super(ctx, fields);
-                    // used to correlate rpc requests and replies
-                    this._resp = new EventEmitter();
-                }
-                rpc(routingKey, msg, { uid = config.uid, timeout = config.timeout, ...options } = {}) {
-                    return rpc.call(this, routingKey, msg, { uid, timeout, ...options });
-                }
-                consume(queue, fn, options) {
-                    return super.consume(queue, reply.call(this, fn), options);
-                }
-            };
+    return (constructor) =>
+        class RPCChannel extends constructor {
+            constructor(ctx, fields) {
+                super(ctx, fields);
+                // Used to correlate rpc requests and replies
+                this._resp = new EventEmitter();
+            }
+
+            rpc(routingKey, msg, { uid = config.uid, timeout = config.timeout, ...options } = {}) {
+                return rpc.call(this, routingKey, msg, { uid, timeout, ...options });
+            }
+
+            consume(queue, fn, options) {
+                return super.consume(queue, reply.call(this, fn), options);
+            }
+        };
 };
