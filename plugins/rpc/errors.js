@@ -6,7 +6,8 @@ const Keys = {
 };
 
 const parse = (msg) => new Promise((resolve, reject) => {
-    if (MessageError.is(msg)) {
+    if (MessageError.is(msg) ||
+        msg.properties.headers[Keys.error]) {
         const deserialized = JSON.parse(msg.content.toString());
         reject(new MessageError(deserialized, msg));
     } else resolve(msg);
@@ -33,7 +34,12 @@ const serialize = (err) => {
     }
     return {
         content: Buffer.from(JSON.stringify(err.toString())),
-        options: { headers: {}, contentType: 'application/json' }
+        options: {
+            headers: {
+                [Keys.error]: true
+            },
+            contentType: 'application/json'
+        }
     };
 };
 

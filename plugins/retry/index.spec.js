@@ -48,7 +48,8 @@ describe('retry plugin', () => {
             .catch((err) => {
                 assert.strictEqual(err.message, 'error!');
                 done();
-            });
+            })
+            .catch(done);
     });
 
     it('should not retry when deeper rpc failed', (done) => {
