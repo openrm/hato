@@ -53,6 +53,29 @@ function nacked(msg) {
     else return state[0];
 }
 
+/** @this {ContextChannel} */
+function retryOnError(fn, retries, computeDelay) {
+    return (msg) => {
+        const count = context.count(msg.properties.headers);
+
+        return Promise.resolve()
+            .then(() => fn(msg))
+            .catch((err) => {
+                const retryable =
+                    count < retries &&
+                    errors.isRetryable(err) &&
+                    !nacked(msg);
+
+                if (retryable) {
+                    return retry.call(this, msg, count + 1, computeDelay(count));
+                }
+
+                // prevent retyring in subsequent calls
+                throw new RetryError(err, msg);
+            });
+    };
+}
+
 module.exports = class extends Plugin {
 
     constructor({ retries = 5, ...options } = {}) {
@@ -89,27 +112,7 @@ module.exports = class extends Plugin {
 
                 const computeDelay = backoff({ ...plugin.options, ...localOptions });
 
-                const handler = (msg) => {
-                    const count = context.count(msg.properties.headers);
-
-                    return Promise.resolve()
-                        .then(() => fn(msg))
-                        .catch((err) => {
-                            const retryable =
-                                count < retries &&
-                                errors.isRetryable(err) &&
-                                !nacked(msg);
-
-                            if (retryable) {
-                                console.log('retrying', err.toString());
-                                return retry.call(this, msg, count + 1, computeDelay(count));
-                            }
-
-                            // prevent retyring in subsequent calls
-                            throw new RetryError(err, msg);
-                        });
-                };
-
+                const handler = retryOnError.call(this, fn, retries, computeDelay);
                 return super.consume(queue, handler, options);
             }
 

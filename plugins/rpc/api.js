@@ -29,52 +29,51 @@ function rpc(routingKey, msg, { uid, timeout, ...options }) {
             new Promise(rpc({ replyTo, correlationId, timeout, ...options })));
 }
 
+function getReplier(msg) {
+    const {
+        replyTo,
+        correlationId
+    } = msg.properties;
+
+    let replied = false;
+
+    return (err, res) => {
+        if (replied) return;
+        else replied = true;
+
+        if (err) {
+            const { content, options } = errors.serialize(err);
+            const headers = { ...msg.properties.headers, ...options.headers };
+            return (ch) => ch
+                .publish('', replyTo, content, { ...options, headers, correlationId });
+        }
+        return (ch) => ch
+            .publish('', replyTo, res, { correlationId });
+    };
+}
+
 /**
  * @this {RPCChannel}
  */
 function serveRpc(consume, queue, fn, options) {
     const handler = (msg) => {
-        const {
-            replyTo,
-            correlationId
-        } = msg.properties;
-
         // not a rpc
-        if (!replyTo) return fn(msg);
+        if (!msg.properties.replyTo) return fn(msg);
 
-        let replied = false;
+        const reply = getReplier(msg);
 
-        const reply = (err, res) => {
-            if (replied) return;
-            else replied = true;
-
-            let respond;
-
-            if (err) {
-                const { content, options } = errors.serialize(err);
-                const headers = { ...msg.properties.headers, ...options.headers };
-                respond = (ch) => ch
-                    .publish('', replyTo, content, { ...options, headers, correlationId });
-            } else {
-                respond = (ch) => ch
-                    .publish('', replyTo, res, { correlationId });
-            }
-
-            return this._asserted()
-                .then(respond)
-                .then(() => msg.ack())
-                .catch((err) => {
-                    this.logger.error(
-                        '[AMQP:rpc] Failed to reply back to client.',
-                        err);
-                });
-        };
-
-        msg.reply = reply;
+        msg.reply = (err, res) => this._asserted()
+            .then(reply(err, res))
+            .then(() => msg.ack())
+            .catch((err) => {
+                this.logger.error(
+                    '[AMQP:rpc] Failed to reply back to client.',
+                    err);
+            });
 
         return promise
             .wrap(() => fn(msg))
-            .then((res) => reply(null, res));
+            .then((res) => msg.reply(null, res));
     };
 
     return consume
