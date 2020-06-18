@@ -32,8 +32,10 @@ const serialize = (err) => {
             }
         };
     }
+    let content = err.toString();
+    if (err instanceof Error) content = err.message;
     return {
-        content: Buffer.from(JSON.stringify(err.toString())),
+        content: Buffer.from(JSON.stringify(content)),
         options: {
             headers: {
                 [Keys.error]: true

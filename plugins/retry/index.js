@@ -47,6 +47,12 @@ function retry(msg, count, delay = 500) {
             .then(msg.ack));
 }
 
+function nacked(msg) {
+    const state = msg[Symbol.for('hato.ack.state')];
+    if (!state) return false;
+    else return state[0];
+}
+
 module.exports = class extends Plugin {
 
     constructor({ retries = 5, ...options } = {}) {
@@ -83,20 +89,28 @@ module.exports = class extends Plugin {
 
                 const computeDelay = backoff({ ...plugin.options, ...localOptions });
 
-                const handler = (err, msg) => {
+                const handler = (msg) => {
                     const count = context.count(msg.properties.headers);
 
-                    const retryable =
-                        count < retries && errors.isRetryable(err) && !RetryError.is(msg);
+                    return Promise.resolve()
+                        .then(() => fn(msg))
+                        .catch((err) => {
+                            const retryable =
+                                count < retries &&
+                                errors.isRetryable(err) &&
+                                !nacked(msg);
 
-                    retryable ?
-                        retry.call(this, msg, count + 1, computeDelay(count)) :
-                        msg.nack(false, false, new RetryError(err, msg));
-                    return err instanceof Error ?
-                        err : new Error(err.toString());
+                            if (retryable) {
+                                console.log('retrying', err.toString());
+                                return retry.call(this, msg, count + 1, computeDelay(count));
+                            }
+
+                            // prevent retyring in subsequent calls
+                            throw new RetryError(err, msg);
+                        });
                 };
 
-                return super.consume(queue, fn, options).on('error', handler);
+                return super.consume(queue, handler, options);
             }
 
         };
