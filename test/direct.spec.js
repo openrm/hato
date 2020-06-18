@@ -7,30 +7,34 @@ describe('direct', function() {
     afterEach(() => client.close());
 
     it('should receive a basic publish', function(done) {
-        client = new Client('amqp://guest:guest@127.0.0.1:5672', {
+        Client.start('amqp://guest:guest@127.0.0.1:5672', {
             plugins: [
                 new Encoding('json')
             ]
-        });
-
-        client.start().catch(done);
-
-        const MSG = { 1: 'message' };
-
-        client.subscribe('a.routing.key', async(msg) => {
-            msg.ack();
-
-            const content = msg.content;
-            assert.deepStrictEqual(content, MSG);
-
-            await confirmed;
-
-            done();
         })
-            .on('error', done)
-            .catch(done);
+            .then((cli) => client = cli)
+            .then((client) => {
 
-        const confirmed = client.publish('a.routing.key', MSG).catch(done);
+                client.start().catch(done);
+
+                const MSG = { 1: 'message' };
+
+                client.subscribe('a.routing.key', async(msg) => {
+                    msg.ack();
+
+                    const content = msg.content;
+                    assert.deepStrictEqual(content, MSG);
+
+                    await confirmed;
+
+                    done();
+                })
+                    .on('error', done)
+                    .catch(done);
+
+                const confirmed = client.publish('a.routing.key', MSG).catch(done);
+
+            });
     });
 
 

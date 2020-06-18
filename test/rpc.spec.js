@@ -9,8 +9,8 @@ describe('rpc', function() {
         client = new Client('amqp://guest:guest@127.0.0.1:5672', {
             plugins: [
                 new Encoding('json'),
-                new Duplex(),
-                new RPC()
+                'duplex',
+                'rpc'
             ]
         });
 
@@ -32,7 +32,7 @@ describe('rpc', function() {
         client = new Client('amqp://guest:guest@127.0.0.1:5672', {
             plugins: [
                 new Encoding('json'),
-                new RPC()
+                'rpc'
             ]
         });
 
@@ -45,7 +45,8 @@ describe('rpc', function() {
             msg.ack();
             const reply = await client.rpc('rpc.1', ++msg.content)
             return ++reply.content;
-        }).on('error', done)
+        })
+            .on('error', done)
             .catch(done);
 
         client.start()
@@ -60,7 +61,7 @@ describe('rpc', function() {
         client = new Client('amqp://guest:guest@127.0.0.1:5672', {
             plugins: [
                 new Encoding('json'),
-                new RPC()
+                'rpc'
             ]
         });
 
