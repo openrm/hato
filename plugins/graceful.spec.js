@@ -1,38 +1,54 @@
 const assert = require('assert');
+const sinon = require('sinon');
 const { EventEmitter } = require('events');
 
 const { constants: { Scopes } } = require('..');
 const GracefulShutdown = require('./graceful');
 
 const conn = new EventEmitter();
-const connect = () => Promise.resolve(conn);
+const _connect = () => Promise.resolve(conn);
 
 describe('graceful plugin', () => {
-    it('terminates a connection on process kill', (done) => {
+    let connect = Promise.resolve;
+
+    beforeEach(() => {
         const plugin = new GracefulShutdown().enable();
-        const wrapped = plugin
-            .install(Scopes.CONNECTION)(connect);
-        conn.close = () => {
-            done();
-            return Promise.resolve();
-        };
-        wrapped().then(() => process.emit('SIGTERM'));
+        connect = plugin
+            .install(Scopes.CONNECTION)(_connect);
+
+        conn.close = sinon.fake.resolves();
     });
 
-    it('tries to close the connection only once', (done) => {
-        const plugin = new GracefulShutdown().enable();
-        const wrapped = plugin
-            .install(Scopes.CONNECTION)(connect);
-        let count = 0;
-        conn.close = () => {
-            count++;
-            return Promise.resolve();
-        };
-        wrapped()
-            .then(() => Promise.race([process.emit('SIGTERM'), process.emit('SIGINT')]))
+    afterEach(() => {
+        sinon.restore();
+        conn.emit('close');
+    });
+
+    it('should terminate the connection on process kill', () => connect()
+        .then(() => {
+            process.emit('SIGTERM');
+            assert.ok(conn.close.called);
+        }));
+
+    it('should close the connection only once', () => connect()
+        .then(() => {
+            process.emit('SIGTERM');
+            process.emit('SIGINT');
+
+            assert.ok(conn.close.calledOnce);
+        }));
+
+    it('should not call close() after closed', () => {
+        const noop = () => {};
+        process.on('SIGINT', noop);
+        return connect()
             .then(() => {
-                assert.strictEqual(count, 1);
-                done();
+                conn.emit('close');
+                process.emit('SIGINT');
+
+                assert.ok(!conn.close.called);
+
+                process.removeListener('SIGINT', noop);
             });
     });
 });

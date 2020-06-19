@@ -15,7 +15,8 @@ describe('service-context plugin', () => {
             }
         }
     });
-    it('injects specified service context into client properties', (done) => {
+
+    it('should inject specified service context into client properties', (done) => {
         const fn = function(url, options) {
             const properties = options.clientProperties;
             assert.strictEqual(properties['service.name'], 'test-client');
@@ -25,34 +26,46 @@ describe('service-context plugin', () => {
             done();
         };
         plugin.enable();
-        plugin.install(Scopes.CONNECTION)(fn)('', {});
+        plugin.install(Scopes.CONNECTION)(fn)('amqp://localhost', {});
     });
-    it('names queues automatically in a microservices context', (done) => {
-        const testQueue = {
-            scopes: {
-                [Scopes.CHANNEL]: (create) => () => create()
-                    .then((ch) => {
-                        const original = ch.assertQueue;
-                        ch.assertQueue = function(name, options) {
-                            assert.strictEqual(name, 'test-client:foo:amq.topic');
-                            assert.strictEqual(options.durable, false);
-                            assert.strictEqual(options.exclusive, true);
-                            done();
-                            return original.apply(this, arguments);
-                        };
-                        return ch;
-                    })
-                    .catch(done)
-            },
-            enable() {},
-            install() {
-                return this.scopes[Scopes.CHANNEL];
-            }
-        };
+
+    it('should name queues automatically in a microservices context', async() => {
         const client = new Client('amqp://guest:guest@127.0.0.1:5672', {
-            plugins: [plugin, testQueue]
+            plugins: [plugin]
         });
-        client.type('topic').subscribe('foo', () => {});
-        client.start().catch(done);
+
+        await client.start();
+
+        const ch = await client._asserted();
+
+        const original = ch.assertQueue;
+        ch.assertQueue = function(name, options) {
+            assert.strictEqual(name, 'test-client:foo:amq.topic');
+            assert.strictEqual(options.durable, false);
+            assert.strictEqual(options.exclusive, true);
+            return original.apply(this, arguments);
+        };
+
+        await client.type('topic').subscribe('foo', () => {});
+    });
+
+    it('should serialize exchange names of type headers', async() => {
+        const client = new Client('amqp://guest:guest@127.0.0.1:5672', {
+            plugins: [plugin]
+        });
+
+        await client.start();
+
+        const ch = await client._asserted();
+
+        const original = ch.assertQueue;
+        ch.assertQueue = function(name, options) {
+            assert.strictEqual(name, 'test-client:key=value;a=1:amq.headers');
+            assert.strictEqual(options.durable, false);
+            assert.strictEqual(options.exclusive, true);
+            return original.apply(this, arguments);
+        };
+
+        await client.type('headers').subscribe({ key: 'value', a: '1' }, () => {});
     });
 });
