@@ -29,7 +29,9 @@ class RetryError extends MessageError {
 }
 
 function isRetryable(err) {
-    if (RetryError.promotable(err)) return false;
+    if (err instanceof RetryError ||
+        RetryError.promotable(err) ||
+        err.cause && err.cause.message.startsWith('Channel ended')) return false;
     else if (err instanceof MessageError) {
         const { properties: { headers } } = err.msg;
         return headers['x-retry-error'] !== true;

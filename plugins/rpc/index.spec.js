@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { Client, errors: { TimeoutError } } = require('../..');
+const { Client, errors: { TimeoutError, MessageError } } = require('../..');
 const RPC = require('../rpc');
 
 describe('rpc plugin', () => {
@@ -24,7 +24,8 @@ describe('rpc plugin', () => {
             .catch((err) => {
                 assert.ok(err instanceof TimeoutError);
                 done();
-            });
+            })
+            .catch(done);
     });
 
     it('should but succeed with shorter timeout', (done) => {
@@ -32,6 +33,33 @@ describe('rpc plugin', () => {
             .subscribe('rpc.1', () => Buffer.from('hi'))
             .then(() => client.rpc('rpc.1', Buffer.from('hello'), { timeout: 100 }))
             .then(() => done())
+            .catch(done);
+    });
+
+    it('should deserialize error context', (done) => {
+        client
+            .subscribe('rpc.1', (msg) => {
+                try {
+                    throw new Error('test');
+                } catch (e) {
+                    msg.nack(false, false, e);
+                    throw e;
+                }
+            })
+            .on('error', (err) => {
+                try {
+                    assert.strictEqual(err.message, 'test');
+                } catch (e) {
+                    done(e);
+                }
+            })
+            .then(() => client.rpc('rpc.1', Buffer.from('hello')))
+            .then(() => done(new Error('RPC call should fail')))
+            .catch((err) => {
+                assert.ok(err instanceof MessageError);
+                assert.strictEqual(err.message, 'test');
+                done();
+            })
             .catch(done);
     });
 });

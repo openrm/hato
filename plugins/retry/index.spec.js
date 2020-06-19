@@ -2,6 +2,7 @@ const assert = require('assert');
 const { Client } = require('../..');
 const { MessageError } = require('../../lib/errors');
 const Retry = require('.');
+const { RetryError, isRetryable } = require('./errors');
 const RPC = require('../rpc');
 
 describe('retry plugin', () => {
@@ -26,6 +27,7 @@ describe('retry plugin', () => {
                 assert.strictEqual(msg.content.toString(), 'hello');
                 if (failed++ < retries) throw 'fail!';
                 else {
+                    assert.strictEqual(failed - 1, retries);
                     assert.ok(failed > 0);
                     done();
                 }
@@ -44,6 +46,36 @@ describe('retry plugin', () => {
                 throw 'error!';
             })
             .then(() => client.rpc('rpc.1', Buffer.from('hello')))
+            .then(() => done(new Error('RPC call should fail')))
+            .catch((err) => {
+                assert.strictEqual(err.message, 'error!');
+                done();
+            })
+            .catch(done);
+    });
+
+    it('should not retry when negatively acknowledged manually', (done) => {
+        let c = 0;
+        client
+            .subscribe('rpc.nack', (msg) => {
+                try {
+                    assert.strictEqual(c++, 0);
+                } catch (e) {
+                    done(e);
+                }
+                msg.nack(false, false);
+                throw 'error!';
+            }, { retry: { strategy: 'exponential', base: 1.5 } })
+            .on('error', (err) => {
+                try {
+                    assert.ok(err instanceof RetryError);
+                    assert.strictEqual(err.cause.message, 'error!');
+                    assert.ok(!isRetryable(err));
+                } catch (e) {
+                    done(e);
+                }
+            })
+            .then(() => client.rpc('rpc.nack', Buffer.from('hello')))
             .then(() => done(new Error('RPC call should fail')))
             .catch((err) => {
                 assert.strictEqual(err.message, 'error!');
