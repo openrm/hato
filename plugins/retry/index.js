@@ -43,8 +43,7 @@ function retry(msg, count, delay = 500) {
         .then(assertDelayQueue(delay, exchange))
         .then(() => this
             .exchange(delayExchange)
-            .publish(routingKey, msg.content, options)
-            .then(msg.ack));
+            .publish(routingKey, msg.content, options));
 }
 
 function nacked(msg) {
@@ -67,8 +66,10 @@ function retryOnError(fn, retries, computeDelay) {
                     !nacked(msg);
 
                 if (retryable) {
-                    return retry.call(this, msg, count + 1, computeDelay(count));
-                }
+                    return retry
+                        .call(this, msg, count + 1, computeDelay(count))
+                        .then(() => msg.ack());
+                } else msg.nack(false, false);
 
                 // prevent retyring in subsequent calls
                 throw new RetryError(err, msg);
