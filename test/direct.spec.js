@@ -152,7 +152,7 @@ describe('direct', function() {
         const confirmed =
             (client = new Client())
                 .start()
-                .then(() => client.queue('foo', { exclusive: true })) // Assert the queue first.
+                .then(() => client.queue('foo', { durable: false, exclusive: true })) // Assert the queue first.
                 .then(() => client
                     .assert(false)
                     .queue('foo')
