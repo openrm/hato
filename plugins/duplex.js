@@ -10,13 +10,14 @@ const Modes = {
     SUBSCRIPTION: 'subscription'
 };
 
-const chainAll = (promises) => promises.reduce((chain, promise) => {
-    let arr = [];
-    return chain.then((prev) => {
-        arr = prev;
-        return promise;
-    }).then((res) => [...arr, res]);
-}, Promise.resolve());
+const chainAll = (promises) => {
+    const arr = [];
+    return promises
+        .reduce((chain, promise) =>
+            chain.then((prev) => (arr.push(prev), promise())),
+        promises.shift())
+        .then(() => arr);
+};
 
 class DuplexConnection extends EventEmitter {
     constructor(connect) {
@@ -95,7 +96,10 @@ class DuplexChannel extends EventEmitter {
                 ]);
                 ['close', 'recover'].forEach((member) => {
                     this[member] = function() {
-                        return chainAll([pubCh[member](), subCh[member]()]);
+                        return chainAll([
+                            pubCh[member].bind(pubCh),
+                            subCh[member].bind(subCh)
+                        ]);
                     };
                 });
                 return this;
