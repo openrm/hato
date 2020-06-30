@@ -15,7 +15,7 @@ const chainAll = (promises) => {
     return promises
         .reduce((chain, promise) =>
             chain.then((prev) => (arr.push(prev), promise())),
-        promises.shift())
+        promises.shift()())
         .then(() => arr);
 };
 
