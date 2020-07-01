@@ -28,6 +28,7 @@ const Plugins = {
     gracefulShutdown: plugins.GracefulShutdown,
     connectionRetry: plugins.ConnectionRetry,
     duplex: plugins.Duplex,
+    dlx: plugins.DLX,
     encoding: plugins.Encoding,
     rpc: plugins.RPC,
     confirm: plugins.Confirm,
