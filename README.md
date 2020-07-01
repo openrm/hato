@@ -1,6 +1,8 @@
 # hato
 
 [![CircleCI](https://img.shields.io/circleci/build/github/openrm/hato)](https://app.circleci.com/pipelines/github/openrm/hato?branch=master)
+[![npm](https://img.shields.io/npm/v/hato)](https://www.npmjs.com/package/hato)
+![node-current](https://img.shields.io/node/v/hato)
 [![Code Climate maintainability](https://img.shields.io/codeclimate/maintainability/openrm/hato)](https://codeclimate.com/github/openrm/hato/maintainability)
 [![Code Climate coverage](https://img.shields.io/codeclimate/coverage/openrm/hato)](https://codeclimate.com/github/openrm/hato/test_coverage)
 [![GitHub](https://img.shields.io/github/license/openrm/hato)](https://github.com/openrm/hato/blob/master/LICENSE)
