@@ -9,7 +9,7 @@ A minamalist, customizeable AMQP framework
 
 ## Installation
 ```sh
-$ git clone https://github.com/openrm/hato.git
+$ npm install hato
 ```
 
 ## About
@@ -41,7 +41,7 @@ const client = new Client(BROKER_URL, {
     /**
      * Optionally specify a module for logging
      */
-    logger: myLogger,
+    logger: myLogger
 });
 ```
 
@@ -50,7 +50,7 @@ Create a queue and subscribe to an event
 client
     .type('topic')
     .queue('my.queue', { exclusive: true })
-    .subscribe('an.event', async (msg) => {
+    .subscribe('an.event', (msg) => {
         console.log(msg);
 
         // Acknowladge the message
@@ -65,7 +65,7 @@ client
     .catch(console.error);
 ````
 
-After the client is started, you can publish a message to the queue
+After the client started, you can publish a message to the queue
 ```js
 client
     .type('topic')
