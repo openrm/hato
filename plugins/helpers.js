@@ -1,15 +1,20 @@
 const asyncHooks = require('async_hooks');
-const state = new Map();
 
-const breakLoop = function(name, fn) {
-    return function(...args) {
+const state = new Map();
+const loopSymbol = Symbol();
+
+const breakLoop = function(src, dst, name) {
+    return Object.assign(function(...args) {
         const asyncId = asyncHooks.executionAsyncId();
-        const events = state.get(asyncId) || [];
-        if (!events.includes(name)) {
-            state.set(asyncId, events.concat(name));
-            fn(...args);
-        }
-    };
+        const wmap = state.get(asyncId) || new WeakMap();
+        const events = wmap.get(dst) || [];
+        if (events.includes(name)) return;
+        else events.push(name);
+        state.set(asyncId, wmap.set(src, events).set(dst, events));
+        dst.emit(name, ...args);
+    }, {
+        [loopSymbol]: true
+    });
 };
 
 const hook = asyncHooks.createHook({
@@ -21,8 +26,9 @@ const hook = asyncHooks.createHook({
 
 function forwardEvents(src, dst, ...events) {
     hook.enable(); // enabled only once even if called repeatedly.
-    events.forEach((name) =>
-        src.on(name, breakLoop(name, dst.emit.bind(dst, name))));
+    events.forEach((name) => {
+        src.on(name, breakLoop(src, dst, name));
+    });
     return dst;
 }
 
@@ -31,8 +37,9 @@ function forwardAllEvents(src, dst, bidirectional = false, but = []) {
     but = but.concat('newListener', 'removeListener');
     const events = dst.eventNames().filter((name) => !but.includes(name));
     return forwardEvents(src, dst, ...events)
-        .on('newListener', (eventName) => {
-            if (!events.concat(but).includes(eventName)) {
+        .on('newListener', (eventName, listener) => {
+            if (!listener[loopSymbol]
+                && !events.concat(but).includes(eventName)) {
                 forwardEvents(src, dst, eventName);
             }
         });
