@@ -8,7 +8,10 @@
     "url": "git+https://github.com/openrm/hato.git"
   },
   "keywords": [
-    "amqp"
+    "amqp",
+    "amqplib",
+    "rabbitmq",
+    "promise"
   ],
   "author": "Open Room Inc.",
   "license": "MIT",
