@@ -1,7 +1,7 @@
 {
   "name": "hato",
   "version": "0.0.1",
-  "description": "A real-world AMQP framework in Node.js",
+  "description": "A minamalist, customizeable AMQP framework",
   "main": "index.js",
   "repository": {
     "type": "git",
