@@ -29,6 +29,15 @@ module.exports = class extends Plugin {
                 if (0 < c) this.logger.debug(
                     '[AMQP:conn-retry] Retrying to connect...');
 
+                let timer = null;
+
+                const close = () => {
+                    clearTimeout(timer);
+                };
+
+                process.once('SIGINT', close);
+                process.once('SIGTERM', close);
+
                 return connect(...args)
                     .catch((err) => {
                         if (c + 1 >= retries) throw err;
@@ -39,10 +48,15 @@ module.exports = class extends Plugin {
                             err.message);
 
                         return new Promise((resolve, reject) => {
-                            const timer = setTimeout(() =>
+                            timer = setTimeout(() =>
                                 retryable(c + 1, ...args).then(resolve)
                                     .catch(reject), wait);
                             this.timeouts.push(timer);
+                        }).then((r) => {
+                            process.removeListener('SIGINT', close);
+                            process.removeListener('SIGTERM', close);
+
+                            return r;
                         });
                     });
             };
