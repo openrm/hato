@@ -26,6 +26,26 @@ describe('conn-retry plugin', () => {
             .catch(done);
     });
 
+    it('should abort the retry process on process kill', function(done) {
+        const thrown = new Error('error!');
+        let count = 0;
+        const connect = () => new Promise((resolve, reject) => {
+            count++;
+            setImmediate(() => reject(thrown));
+            process.emit('SIGINT');
+        });
+
+        const retryPlugin = new ConnectionRetry({ retries: 3, min: 5, base: 250 }).enable();
+        const retried = retryPlugin.install(Scopes.CONNECTION)(connect);
+
+        retried()
+            .then(() => {
+                assert.strictEqual(count, 1);
+                done();
+            })
+            .catch(done);
+    });
+
     it('should abort retries when told so', (done) => {
         const err = new Error('error!');
 
