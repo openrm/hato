@@ -7,7 +7,7 @@
 [![Code Climate coverage](https://img.shields.io/codeclimate/coverage/openrm/hato)](https://codeclimate.com/github/openrm/hato/test_coverage)
 [![GitHub](https://img.shields.io/github/license/openrm/hato)](https://github.com/openrm/hato/blob/master/LICENSE)
 
-A minamalist, customizeable AMQP framework
+A minimalist, customizeable AMQP framework
 
 ## Installation
 ```sh
