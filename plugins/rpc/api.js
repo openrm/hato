@@ -8,6 +8,7 @@ const errors = require('./errors');
  *
  * @typedef {object} RPCMethods
  * @property {EventEmitter} _resp
+ * @property {string} _replyTo
  * @property {any} rpc
  *
  * @typedef {ContextChannel & RPCMethods} RPCChannel
@@ -20,13 +21,7 @@ function rpc(routingKey, msg, { uid, timeout, ...options }) {
     const rpc = makeRpc.bind(this, routingKey, msg);
 
     return this._asserted()
-        .then((ch) => ch.assertQueue('', {
-            durable: false,
-            exclusive: true,
-            autoDelete: true
-        }))
-        .then(({ queue: replyTo }) =>
-            new Promise(rpc({ replyTo, correlationId, timeout, ...options })));
+        .then(() => new Promise(rpc({ correlationId, timeout, ...options })));
 }
 
 function getReplier(msg) {
@@ -84,18 +79,14 @@ function serveRpc(consume, queue, fn, options) {
 
 /** @this {RPCChannel} */
 function makeRpc(routingKey, msg, { timeout, ...options }) {
-    const { correlationId, replyTo } = options;
+    const { correlationId } = options;
 
     return (resolve, reject) => {
-        const fn = (msg) =>
-            this._resp.emit(msg.properties.correlationId, msg);
-
-        let timer, listener, tag;
+        let timer, listener;
 
         const cleanup = () => {
             this._resp.removeListener(correlationId, listener);
             clearTimeout(timer);
-            return this.cancel(tag).catch(reject);
         };
 
         if (timeout > 0) {
@@ -109,17 +100,12 @@ function makeRpc(routingKey, msg, { timeout, ...options }) {
         this._resp.on(correlationId, listener = (msg) => {
             timer && clearTimeout(timer);
             errors.parse(msg)
-                .then((res) => cleanup().then(() => res))
+                .then((res) => Promise.resolve(cleanup()).then(() => res))
                 .then(resolve, reject);
         });
 
-        this._asserted()
-            .then((ch) => this._consume(ch, replyTo, fn, { noAck: true }))
-            .then(({ consumerTag }) => {
-                tag = consumerTag;
-                return this.publish(routingKey, msg, options);
-            })
-            .catch(reject);
+        const opts = { ...options, replyTo: this._replyTo };
+        return this.publish(routingKey, msg, opts).catch(reject);
     };
 }
 
@@ -136,8 +122,24 @@ module.exports = function(config) {
         class RPCChannel extends constructor {
             constructor(ctx, fields) {
                 super(ctx, fields);
+
                 // Used to correlate rpc requests and replies
                 this._resp = new EventEmitter();
+
+                const replyHandler= (msg) =>
+                    this._resp.emit(msg.properties.correlationId, msg);
+
+                const assertReplyQueue = (ch) => ch
+                    .assertQueue('', {
+                        durable: false,
+                        exclusive: true,
+                        autoDelete: true
+                    })
+                    .then(({ queue }) => this._replyTo = queue)
+                    .then((replyTo) =>
+                        this._consume(ch, replyTo, replyHandler, { noAck: true }));
+
+                this._assert((ch) => ch.then(assertReplyQueue));
             }
 
             rpc(routingKey, msg, { uid = config.uid, timeout = config.timeout, ...options } = {}) {
