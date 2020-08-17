@@ -1,4 +1,3 @@
-const { EventEmitter } = require('events');
 const { promise } = require('../helpers');
 const { TimeoutError } = require('../../lib/errors');
 const errors = require('./errors');
@@ -7,18 +6,16 @@ const errors = require('./errors');
  * @typedef {import('../../lib/api')} ContextChannel
  *
  * @typedef {object} RPCMethods
- * @property {EventEmitter} _resp
- * @property {string} _replyTo
  * @property {any} rpc
  *
  * @typedef {ContextChannel & RPCMethods} RPCChannel
  */
 
 /** @this {RPCChannel} */
-function rpc(routingKey, msg, { uid, timeout, ...options }) {
+function rpc(plugin, routingKey, msg, { uid, timeout, ...options }) {
     const correlationId = uid.generate();
 
-    const rpc = makeRpc.bind(this, routingKey, msg);
+    const rpc = makeRpc.bind(this, plugin, routingKey, msg);
 
     return this._asserted()
         .then(() => new Promise(rpc({ correlationId, timeout, ...options })));
@@ -78,14 +75,14 @@ function serveRpc(consume, queue, fn, options) {
 }
 
 /** @this {RPCChannel} */
-function makeRpc(routingKey, msg, { timeout, ...options }) {
+function makeRpc(plugin, routingKey, msg, { timeout, ...options }) {
     const { correlationId } = options;
 
     return (resolve, reject) => {
         let timer, listener;
 
         const cleanup = () => {
-            this._resp.removeListener(correlationId, listener);
+            plugin._resp.removeListener(correlationId, listener);
             clearTimeout(timer);
         };
 
@@ -97,14 +94,14 @@ function makeRpc(routingKey, msg, { timeout, ...options }) {
             timer = setTimeout(abort, timeout);
         }
 
-        this._resp.on(correlationId, listener = (msg) => {
+        plugin._resp.on(correlationId, listener = (msg) => {
             timer && clearTimeout(timer);
             errors.parse(msg)
                 .then((res) => Promise.resolve(cleanup()).then(() => res))
                 .then(resolve, reject);
         });
 
-        const opts = { ...options, replyTo: this._replyTo };
+        const opts = { ...options, replyTo: plugin._replyTo };
         return this.publish(routingKey, msg, opts).catch(reject);
     };
 }
@@ -114,36 +111,28 @@ function makeRpc(routingKey, msg, { timeout, ...options }) {
  * @typedef {{ new(...args: any): T }} ConstructorOf
  */
 /**
- * @param {{ uid: { generate: () => string }, timeout: number }} config
  * @return {(original: ConstructorOf<ContextChannel>) => ConstructorOf<RPCChannel>}
  * */
-module.exports = function(config) {
+module.exports = function(plugin) {
+    const config = plugin.options;
     return (constructor) =>
         class RPCChannel extends constructor {
             constructor(ctx, fields) {
                 super(ctx, fields);
 
-                // Used to correlate rpc requests and replies
-                this._resp = new EventEmitter();
+                if (!plugin._configured) {
+                    const handler= (msg) =>
+                        plugin._resp.emit(msg.properties.correlationId, msg);
 
-                const replyHandler= (msg) =>
-                    this._resp.emit(msg.properties.correlationId, msg);
+                    const handleReplies = (ch) =>
+                        this._consume(ch, plugin._replyTo, handler, { noAck: true });
 
-                const assertReplyQueue = (ch) => ch
-                    .assertQueue('', {
-                        durable: false,
-                        exclusive: true,
-                        autoDelete: true
-                    })
-                    .then(({ queue }) => this._replyTo = queue)
-                    .then((replyTo) =>
-                        this._consume(ch, replyTo, replyHandler, { noAck: true }));
-
-                this._assert((ch) => ch.then(assertReplyQueue));
+                    plugin._configured = this._assert((ch) => ch.then(handleReplies));
+                }
             }
 
             rpc(routingKey, msg, { uid = config.uid, timeout = config.timeout, ...options } = {}) {
-                return rpc.call(this, routingKey, msg, { uid, timeout, ...options });
+                return rpc.call(this, plugin, routingKey, msg, { uid, timeout, ...options });
             }
 
             consume(queue, fn, options) {
