@@ -126,9 +126,8 @@ module.exports = function(plugin) {
 
                     const handleReplies = (ch) =>
                         this._consume(ch, plugin._replyTo, handler, { noAck: true });
-                    this._assert((ch) => ch.then(handleReplies));
 
-                    plugin.configured = true;
+                    plugin._configured = this._assert((ch) => ch.then(handleReplies));
                 }
             }
 
