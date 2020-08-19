@@ -14,6 +14,9 @@ module.exports = class extends Plugin {
 
         this.options = options;
         this.timeouts = [];
+
+        /** @type {any[]} */
+        this.termSignals = ['SIGINT', 'SIGTERM'];
     }
 
     init() {
@@ -21,6 +24,8 @@ module.exports = class extends Plugin {
         const backoff = createBackoff(this.options);
 
         this.scopes[CONNECTION] = this.retry(retries, backoff);
+
+        this.stop = false;
     }
 
     retry(retries, backoff) {
@@ -28,6 +33,9 @@ module.exports = class extends Plugin {
             const retryable = (c, ...args) => {
                 if (0 < c) this.logger.debug(
                     '[AMQP:conn-retry] Retrying to connect...');
+
+                const destroy = this.destroy.bind(this);
+                this.termSignals.forEach((sig) => process.once(sig, destroy));
 
                 return connect(...args)
                     .catch((err) => {
@@ -39,10 +47,16 @@ module.exports = class extends Plugin {
                             err.message);
 
                         return new Promise((resolve, reject) => {
+                            if (this.stop) return reject(new Error('Retries halted'));
+
                             const timer = setTimeout(() =>
                                 retryable(c + 1, ...args).then(resolve)
                                     .catch(reject), wait);
+
                             this.timeouts.push(timer);
+                        }).then((conn) => {
+                            this.termSignals.forEach((sig) => process.off(sig, destroy));
+                            return conn;
                         });
                     });
             };
@@ -53,6 +67,7 @@ module.exports = class extends Plugin {
 
     destroy() {
         this.timeouts.forEach((timer) => clearTimeout(timer));
+        this.stop = true;
     }
 
 };
