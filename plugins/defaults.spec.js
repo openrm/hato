@@ -1,5 +1,6 @@
 const assert = require('assert');
-const { constants: { Scopes } } = require('..');
+const sinon = require('sinon');
+const { Client, constants: { Scopes } } = require('..');
 const DefaultOptions = require('./defaults');
 
 describe('defaults plugin', () => {
@@ -25,10 +26,22 @@ describe('defaults plugin', () => {
             headers: {
                 'x-custom': true
             }
-        }
+        },
+        prefetch: 1
     };
 
     const plugin = new DefaultOptions(defaults).enable();
+
+    before(async function() {
+        this.client = await new Client('amqp://guest:guest@127.0.0.1:5672', {
+            plugins: [plugin]
+        }).start();
+    });
+
+    after(function() {
+        sinon.restore();
+        return this.client.close();
+    });
 
     const createChannel = (defs = defaults) => Promise.resolve({
         assertQueue(queue, options) {
@@ -85,5 +98,20 @@ describe('defaults plugin', () => {
                 done();
             })
             .catch(done);
+    });
+
+    it('should set default prefetch count', function(done) {
+        sinon
+            .stub(Object.getPrototypeOf(this.client._self).prototype, 'consume')
+            .callsFake(function() {
+                try {
+                    assert.strictEqual(this._context.prefetch, defaults.prefetch);
+                    done();
+                } catch (err) {
+                    done(err);
+                }
+            });
+
+        this.client.consume('test', () => {}, { exclusive: true, durable: false });
     });
 });
