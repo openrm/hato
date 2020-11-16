@@ -23,13 +23,19 @@ const wrap = function(ch, name, pos, defaults) {
 
 module.exports = class DefaultOptions extends Plugin {
 
-    constructor({ exchange = {}, queue = {}, consume = {}, publish = {} } = {}) {
+    constructor({
+        exchange = {},
+        queue = {},
+        consume = {},
+        publish = {},
+        prefetch = 0
+    } = {}) {
         super('defaults');
-        this.options = { exchange, queue, consume, publish };
+        this.options = { exchange, queue, consume, publish, prefetch };
     }
 
     init() {
-        const { exchange, queue, consume, publish } = this.options;
+        const { exchange, queue, consume, publish, prefetch } = this.options;
         this.scopes[Scopes.CHANNEL] = (create) => () =>
             create()
                 .then((ch) => {
@@ -39,6 +45,16 @@ module.exports = class DefaultOptions extends Plugin {
                     wrap(ch, 'publish', 3, publish);
                     return ch;
                 });
+
+        this.scopes[Scopes.API] = (base) => class extends base {
+            consume(queue, fn, options) {
+                if (prefetch > this._context.prefetch) {
+                    return super.context({ prefetch }).consume(queue, fn, options);
+                } else {
+                    return super.consume(queue, fn, options);
+                }
+            }
+        };
     }
 
 };
