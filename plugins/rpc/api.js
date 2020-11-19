@@ -21,6 +21,38 @@ function rpc(plugin, routingKey, msg, { uid, timeout, ...options }) {
         .then(() => new Promise(rpc({ correlationId, timeout, ...options })));
 }
 
+/** @this {RPCChannel} */
+function makeRpc(plugin, routingKey, msg, { timeout, ...options }) {
+    const { correlationId } = options;
+
+    return (resolve, reject) => {
+        let timer, listener;
+
+        const cleanup = () => {
+            plugin._resp.removeListener(correlationId, listener);
+            clearTimeout(timer);
+        };
+
+        if (timeout > 0) {
+            const abort = () => {
+                reject(new TimeoutError(timeout));
+                cleanup();
+            };
+            timer = setTimeout(abort, timeout);
+        }
+
+        plugin._resp.on(correlationId, listener = (msg) => {
+            timer && clearTimeout(timer);
+            errors.parse(msg)
+                .then((res) => Promise.resolve(cleanup()).then(() => res))
+                .then(resolve, reject);
+        });
+
+        const opts = { ...options, replyTo: plugin._replyTo };
+        return this.publish(routingKey, msg, opts).catch(reject);
+    };
+}
+
 function getReplier(msg) {
     const {
         replyTo,
@@ -72,38 +104,6 @@ function serveRpc(consume, queue, fn, options) {
         .call(this, queue, handler, options)
         .on('error', (err, msg) =>
             typeof msg.reply === 'function' && msg.reply(err));
-}
-
-/** @this {RPCChannel} */
-function makeRpc(plugin, routingKey, msg, { timeout, ...options }) {
-    const { correlationId } = options;
-
-    return (resolve, reject) => {
-        let timer, listener;
-
-        const cleanup = () => {
-            plugin._resp.removeListener(correlationId, listener);
-            clearTimeout(timer);
-        };
-
-        if (timeout > 0) {
-            const abort = () => {
-                reject(new TimeoutError(timeout));
-                cleanup();
-            };
-            timer = setTimeout(abort, timeout);
-        }
-
-        plugin._resp.on(correlationId, listener = (msg) => {
-            timer && clearTimeout(timer);
-            errors.parse(msg)
-                .then((res) => Promise.resolve(cleanup()).then(() => res))
-                .then(resolve, reject);
-        });
-
-        const opts = { ...options, replyTo: plugin._replyTo };
-        return this.publish(routingKey, msg, opts).catch(reject);
-    };
 }
 
 /**

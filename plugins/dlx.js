@@ -19,15 +19,13 @@ module.exports = class extends Plugin {
         };
         super('dlx');
         this.scopes[CHANNEL] = (create) => () => create()
-            .then((ch) => {
-                return ch
-                    .assertExchange(name, type, options)
-                    .then(() => associateDlx(ch, name))
-                    .catch((err) => {
-                        this.logger.error('[AMQP:dlx] Initial assertions failed:', err);
-                        return ch;
-                    });
-            });
+            .then((ch) => ch
+                .assertExchange(name, type, options)
+                .then(() => associateDlx(ch, name))
+                .catch((err) => {
+                    this.logger.error('[AMQP:dlx] Initial assertions failed:', err);
+                    return ch;
+                }));
     }
 
 };

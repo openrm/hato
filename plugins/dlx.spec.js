@@ -14,13 +14,11 @@ describe('dlx plugin', () => {
         }
     };
 
-    beforeEach(() => {
-        return new Client('amqp://guest:guest@127.0.0.1:5672', {
-            plugins: [new DeadLetter(options)]
-        })
-            .start()
-            .then((cli) => client = cli);
-    });
+    beforeEach(() => new Client('amqp://guest:guest@127.0.0.1:5672', {
+        plugins: [new DeadLetter(options)]
+    })
+        .start()
+        .then((cli) => client = cli));
 
     afterEach(() => client && client.close());
 
