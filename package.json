@@ -1,6 +1,6 @@
 {
   "name": "hato",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "A minamalist, customizeable AMQP framework",
   "main": "index.js",
   "repository": {
