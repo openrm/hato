@@ -48,7 +48,7 @@ module.exports = class DefaultOptions extends Plugin {
 
         this.scopes[Scopes.API] = (base) => class extends base {
             consume(queue, fn, options) {
-                if (this._context.prefetch === 0) {
+                if (this._context.prefetch === 0 && prefetch > 0) {
                     return super.context({ prefetch }).consume(queue, fn, options);
                 } else {
                     return super.consume(queue, fn, options);
