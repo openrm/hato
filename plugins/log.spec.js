@@ -5,6 +5,19 @@ const { Client } = require('..');
 const Encoding = require('./encoding');
 const Log = require('./log');
 
+// Externally resolvable promise
+class Deferred {
+    constructor() {
+        this.promise = new Promise((resolve, reject) => {
+            this.reject = reject;
+            this.resolve = resolve;
+        });
+
+        this.then = this.promise.then.bind(this.promise);
+        this.catch = this.promise.catch.bind(this.promise);
+    }
+}
+
 describe('log plugin', () => {
     let client;
     let emitter;
@@ -26,43 +39,54 @@ describe('log plugin', () => {
 
     describe('publishes', () => {
         it('it should log messages published to a direct exchange', (done) => {
+            const deferred = new Deferred();
+
             // Ensure logged data is as expected
             const check = (data) => {
                 assert.deepStrictEqual(data.content, { string: 'string' });
                 assert.strictEqual(data.routingKey, 'a.routing.key');
                 assert.strictEqual(data.exchange, 'amq.direct');
                 assert.strictEqual(data.action, 'publish');
-                done();
             };
 
             // Message is logged twice, once when published, once when consumed and acknowledged
-            emitter.once('log', check);
-
-            // Subscribe and acknowledge message
-            client
-                .queue('foo', { durable: false, exclusive: true })
-                .subscribe('a.routing.key', (msg) => msg.ack())
-                .on('error', done);
+            emitter.once('log', (data) => deferred.then(() => {
+                try {
+                    check(data);
+                    done();
+                } catch (error) {
+                    done(error);
+                }
+            }));
 
             // Publish message
             client
                 .type('direct')
                 .publish('a.routing.key', { string: 'string' })
+                .then(deferred.resolve)
                 .catch(done);
         });
 
         it('it should log messages published to a topic exchange', (done) => {
+            const deferred = new Deferred();
+
             // Ensure logged data is as expected
             const check = (data) => {
                 assert.deepStrictEqual(data.content, { string: 'string' });
                 assert.strictEqual(data.routingKey, 'a.routing.key');
                 assert.strictEqual(data.exchange, 'amq.topic');
                 assert.strictEqual(data.action, 'publish');
-                done();
             };
 
             // Message is logged twice, once when published, once when consumed and acknowledged
-            emitter.once('log', check);
+            emitter.once('log', (data) => deferred.then(() => {
+                try {
+                    check(data);
+                    done();
+                } catch (error) {
+                    done(error);
+                }
+            }));
 
             // Subscribe and acknowledge message
             client
@@ -74,6 +98,7 @@ describe('log plugin', () => {
             client
                 .type('topic')
                 .publish('a.routing.key', { string: 'string' })
+                .then(deferred.resolve)
                 .catch(done);
         });
     });
