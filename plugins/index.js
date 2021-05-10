@@ -8,5 +8,6 @@ module.exports = {
     Confirm: require('./confirm'),
     Retry: require('./retry'),
     ServiceContext: require('./service'),
-    DefaultOptions: require('./defaults')
+    DefaultOptions: require('./defaults'),
+    Base: require('./base')
 };
