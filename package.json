@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/openrm/hato#readme",
   "dependencies": {
-    "amqplib": "^0.6.0",
+    "amqplib": "^0.8.0",
     "puid": "^1.0.7"
   },
   "devDependencies": {
