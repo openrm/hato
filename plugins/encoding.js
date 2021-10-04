@@ -26,7 +26,11 @@ module.exports = class extends Plugin {
                             '[AMQP:encoding] JSON deserialization failed with an exception.',
                             e.message,
                             'Value:',
-                            msg.content);
+                            msg.content,
+                            'Queue:',
+                            queue,
+                            'Properties:',
+                            msg.properties);
                     }
                     break;
                 default:
