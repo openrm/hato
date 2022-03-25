@@ -2,12 +2,9 @@
     "env": {
         "node": true,
         "mocha": true,
-        "es6": true
+        "es2021": true
     },
     "extends": "eslint:recommended",
-    "parserOptions": {
-        "ecmaVersion": 2019
-    },
     "rules": {
         "indent": ["error", 4],
         "max-lines-per-function": ["warn", { "max": 25, "skipBlankLines": true, "skipComments": true }],
@@ -48,8 +45,5 @@
         "arrow-body-style": "warn",
         "arrow-spacing": "error",
         "arrow-parens": "error"
-    },
-    "globals": {
-        "Promise": "readonly"
     }
 }
