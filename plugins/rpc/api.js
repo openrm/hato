@@ -35,7 +35,7 @@ function makeRpc(plugin, routingKey, msg, { timeout, ...options }) {
 
         if (timeout > 0) {
             const abort = () => {
-                reject(new TimeoutError(timeout));
+                reject(new TimeoutError(timeout, routingKey));
                 cleanup();
             };
             timer = setTimeout(abort, timeout);
