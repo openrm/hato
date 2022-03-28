@@ -10,7 +10,7 @@ node_modules: package.json
 deps: node_modules
 
 test:
-	@npx mocha "test/**/*.js" "**/*.spec.js" --exit
+	@npx mocha "test/**/*.js" "**/*.spec.js"
 
 coverage:
 	@npx nyc -x "test/*" -x "**/*.spec.js" --reporter=lcov --reporter=text-lcov --reporter=text $(MAKE) -s test

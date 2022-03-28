@@ -15,8 +15,6 @@ describe('direct', function() {
             .then((cli) => client = cli)
             .then((client) => {
 
-                client.start().catch(done);
-
                 const MSG = { 1: 'message' };
 
                 client.subscribe('a.routing.key', async(msg) => {

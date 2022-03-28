@@ -36,17 +36,23 @@ describe('service-context plugin', () => {
 
         await client.start();
 
-        const ch = await client._asserted();
+        try {
+            const ch = await client._asserted();
 
-        const original = ch.assertQueue;
-        ch.assertQueue = function(name, options) {
-            assert.strictEqual(name, 'test-client:foo:amq.topic');
-            assert.strictEqual(options.durable, false);
-            assert.strictEqual(options.exclusive, true);
-            return original.apply(this, arguments);
-        };
+            const original = ch.assertQueue;
+            ch.assertQueue = function(name, options) {
+                assert.strictEqual(name, 'test-client:foo:amq.topic');
+                assert.strictEqual(options.durable, false);
+                assert.strictEqual(options.exclusive, true);
+                return original.apply(this, arguments);
+            };
 
-        await client.type('topic').subscribe('foo', () => {});
+            await client.type('topic').subscribe('foo', () => {});
+        } catch (err) {
+            throw err;
+        } finally {
+            await client.close();
+        }
     });
 
     it('should serialize exchange names of type headers', async() => {
@@ -56,16 +62,22 @@ describe('service-context plugin', () => {
 
         await client.start();
 
-        const ch = await client._asserted();
+        try {
+            const ch = await client._asserted();
 
-        const original = ch.assertQueue;
-        ch.assertQueue = function(name, options) {
-            assert.strictEqual(name, 'test-client:key=value;a=1:amq.headers');
-            assert.strictEqual(options.durable, false);
-            assert.strictEqual(options.exclusive, true);
-            return original.apply(this, arguments);
-        };
+            const original = ch.assertQueue;
+            ch.assertQueue = function(name, options) {
+                assert.strictEqual(name, 'test-client:key=value;a=1:amq.headers');
+                assert.strictEqual(options.durable, false);
+                assert.strictEqual(options.exclusive, true);
+                return original.apply(this, arguments);
+            };
 
-        await client.type('headers').subscribe({ key: 'value', a: '1' }, () => {});
+            await client.type('headers').subscribe({ key: 'value', a: '1' }, () => {});
+        } catch (err) {
+            throw err;
+        } finally {
+            await client.close();
+        }
     });
 });
