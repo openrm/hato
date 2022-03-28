@@ -48,8 +48,6 @@ describe('service-context plugin', () => {
             };
 
             await client.type('topic').subscribe('foo', () => {});
-        } catch (err) {
-            throw err;
         } finally {
             await client.close();
         }
@@ -74,8 +72,6 @@ describe('service-context plugin', () => {
             };
 
             await client.type('headers').subscribe({ key: 'value', a: '1' }, () => {});
-        } catch (err) {
-            throw err;
         } finally {
             await client.close();
         }
