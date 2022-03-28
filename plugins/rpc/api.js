@@ -12,25 +12,31 @@ const errors = require('./errors');
  */
 
 /** @this {RPCChannel} */
-function rpc(plugin, routingKey, msg, { uid, timeout, ...options }) {
+function rpc(plugin, routingKey, msg, { uid, ...options }) {
     const correlationId = uid.generate();
 
-    const rpc = makeRpc.bind(this, plugin, routingKey, msg);
+    const publish = prepareRpc
+        .call(this, plugin, routingKey, msg, { correlationId, ...options });
 
     return this._asserted()
-        .then(() => new Promise(rpc({ correlationId, timeout, ...options })));
+        .then(() => new Promise(publish));
 }
 
 /** @this {RPCChannel} */
-function makeRpc(plugin, routingKey, msg, { timeout, ...options }) {
+function prepareRpc(plugin, routingKey, msg, { timeout, ...options }) {
     const { correlationId } = options;
 
     return (resolve, reject) => {
-        let timer, listener;
+        const listener = (msg) => {
+            clearTimeout(msg._timeout);
+            errors.parse(msg)
+                .then((res) => Promise.resolve(cleanup()).then(() => res))
+                .then(resolve, reject);
+        };
 
         const cleanup = () => {
             plugin._resp.removeListener(correlationId, listener);
-            clearTimeout(timer);
+            clearTimeout(msg._timeout);
         };
 
         if (timeout > 0) {
@@ -38,56 +44,48 @@ function makeRpc(plugin, routingKey, msg, { timeout, ...options }) {
                 reject(new TimeoutError(timeout));
                 cleanup();
             };
-            timer = setTimeout(abort, timeout);
+            msg._timeout = setTimeout(abort, timeout);
         }
 
-        plugin._resp.on(correlationId, listener = (msg) => {
-            timer && clearTimeout(timer);
-            errors.parse(msg)
-                .then((res) => Promise.resolve(cleanup()).then(() => res))
-                .then(resolve, reject);
-        });
+        plugin._resp.on(correlationId, listener);
 
         const opts = { ...options, replyTo: plugin._replyTo };
         return this.publish(routingKey, msg, opts).catch(reject);
     };
 }
 
-function getReplier(msg) {
+function reply(ch, msg, err, res) {
     const {
         replyTo,
         correlationId
     } = msg.properties;
 
-    let replied = false;
+    if (msg._replied) return;
+    else msg._replied = true;
 
-    return (err, res) => {
-        if (replied) return;
-        else replied = true;
+    if (err) {
+        const { content, options } = errors.serialize(err);
+        const headers = { ...msg.properties.headers, ...options.headers };
+        return ch
+            .publish('', replyTo, content, { ...options, headers, correlationId });
+    }
 
-        if (err) {
-            const { content, options } = errors.serialize(err);
-            const headers = { ...msg.properties.headers, ...options.headers };
-            return (ch) => ch
-                .publish('', replyTo, content, { ...options, headers, correlationId });
-        }
-        return (ch) => ch
-            .publish('', replyTo, res, { correlationId });
-    };
+    return ch
+        .publish('', replyTo, res, { correlationId });
 }
 
 /**
  * @this {RPCChannel}
  */
-function serveRpc(consume, queue, fn, options) {
+function consume(consume, queue, fn, options) {
     const handler = (msg) => {
         // not a rpc
         if (!msg.properties.replyTo) return fn(msg);
 
-        const reply = getReplier(msg);
+        msg._replied = false;
 
         msg.reply = (err, res) => this._asserted()
-            .then(reply(err, res))
+            .then(ch => reply(ch, msg, err, res))
             .then(() => msg.ack())
             .catch((err) => {
                 this.logger.error(
@@ -136,7 +134,7 @@ module.exports = function(plugin) {
             }
 
             consume(queue, fn, options) {
-                return serveRpc.call(this, super.consume, queue, fn, options);
+                return consume.call(this, super.consume, queue, fn, options);
             }
         };
 };
