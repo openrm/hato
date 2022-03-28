@@ -1,5 +1,6 @@
 const { promise } = require('../helpers');
 const { TimeoutError } = require('../../lib/errors');
+const { symbolRetried } = require('../retry/errors');
 const errors = require('./errors');
 
 /**
@@ -66,8 +67,8 @@ function reply(ch, msg, err, res) {
     if (err) {
         const { content, options } = errors.serialize(err);
         const headers = { ...msg.properties.headers, ...options.headers };
-        return ch
-            .publish('', replyTo, content, { ...options, headers, correlationId });
+        return ch.publish(
+            '', replyTo, content, { ...options, headers, correlationId });
     }
 
     return ch
@@ -85,7 +86,7 @@ function consume(consume, queue, fn, options) {
         msg._replied = false;
 
         msg.reply = (err, res) => this._asserted()
-            .then(ch => reply(ch, msg, err, res))
+            .then((ch) => reply(ch, msg, err, res))
             .then(() => msg.ack())
             .catch((err) => {
                 this.logger.error(
@@ -100,8 +101,11 @@ function consume(consume, queue, fn, options) {
 
     return consume
         .call(this, queue, handler, options)
-        .on('error', (err, msg) =>
-            typeof msg.reply === 'function' && msg.reply(err));
+        .on('error', (err, msg) => {
+            if (typeof msg.reply === 'function' && !err[symbolRetried]) {
+                msg.reply(err);
+            }
+        });
 }
 
 /**
