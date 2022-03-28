@@ -24,7 +24,7 @@ function rpc(plugin, routingKey, msg, { uid, ...options }) {
 }
 
 /** @this {RPCChannel} */
-function prepareRpc(plugin, routingKey, msg, { timeout, ...options }) {
+function prepareRpc(plugin, routingKey, msg, { timeout = 0, ...options }) {
     const { correlationId } = options;
 
     return (resolve, reject) => {
