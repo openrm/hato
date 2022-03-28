@@ -6,7 +6,7 @@ const context = require('./context');
 const configs = require('./configs');
 const errors = require('./errors');
 
-const { RetryError } = errors;
+const { symbolRetried, RetryError } = errors;
 
 /**
  * @typedef {import('../../lib/api')} ContextChannel
@@ -68,11 +68,17 @@ function retryOnError(fn, retries, computeDelay) {
                 if (retryable) {
                     return retry
                         .call(this, msg, count + 1, computeDelay(count))
-                        .then(() => msg.ack());
-                } else msg.nack(false, false);
+                        .then(() => {
+                            msg.ack();
+                            err[symbolRetried] = true;
+                            throw err;
+                        });
+                } else {
+                    msg.nack(false, false);
 
-                // prevent retyring in subsequent calls
-                throw new RetryError(err, msg);
+                    // prevent retyring in subsequent calls
+                    throw new RetryError(err, msg);
+                }
             });
     };
 }
