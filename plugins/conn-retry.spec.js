@@ -1,9 +1,20 @@
 const assert = require('assert');
+const { EventEmitter } = require('events');
+
 const { constants: { Scopes } } = require('..');
 const ConnectionRetry = require('./conn-retry');
 
 describe('conn-retry plugin', () => {
     const plugin = new ConnectionRetry({ retries: 3, min: 5, base: 1.5 });
+
+    before(() => {
+        global._originalProcess = global.process;
+        global.process = new EventEmitter();
+    });
+
+    after(() => {
+        global.process = global._originalProcess;
+    });
 
     it('should retry connection until it reaches the limit', (done) => {
         const thrown = new Error('error!');

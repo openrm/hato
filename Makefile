@@ -12,6 +12,9 @@ deps: node_modules
 test:
 	@npx mocha "test/**/*.js" "**/*.spec.js"
 
+tdd:
+	@npx mocha "test/**/*.js" "**/*.spec.js" --watch
+
 coverage:
 	@npx nyc -x "test/*" -x "**/*.spec.js" --reporter=lcov --reporter=text-lcov --reporter=text $(MAKE) -s test
 

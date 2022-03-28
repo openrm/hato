@@ -17,11 +17,15 @@ describe('graceful plugin', () => {
             .install(Scopes.CONNECTION)(_connect);
 
         conn.close = sinon.fake.resolves();
+
+        global._originalProcess = global.process;
+        global.process = new EventEmitter();
     });
 
     afterEach(() => {
         sinon.restore();
         conn.emit('close');
+        global.process = global._originalProcess;
     });
 
     it('should terminate the connection on process kill', () => connect()
