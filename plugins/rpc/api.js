@@ -3,6 +3,8 @@ const { TimeoutError } = require('../../lib/errors');
 const { symbolRetried } = require('../retry/errors');
 const errors = require('./errors');
 
+const symbolReplied = Symbol.for('hato.rpc.replied');
+
 /**
  * @typedef {import('../../lib/api')} ContextChannel
  *
@@ -61,8 +63,8 @@ function reply(ch, msg, err, res) {
         correlationId
     } = msg.properties;
 
-    if (msg._replied) return;
-    else msg._replied = true;
+    if (msg[symbolReplied]) return;
+    else msg[symbolReplied] = true;
 
     if (err) {
         const { content, options } = errors.serialize(err);
@@ -83,16 +85,21 @@ function consume(consume, queue, fn, options) {
         // not a rpc
         if (!msg.properties.replyTo) return fn(msg);
 
-        msg._replied = false;
+        msg[symbolReplied] = false;
 
-        msg.reply = (err, res) => this._asserted()
-            .then((ch) => reply(ch, msg, err, res))
-            .then(() => msg.ack())
-            .catch((err) => {
-                this.logger.error(
-                    '[AMQP:rpc] Failed to reply back to client.',
-                    err);
-            });
+        Object.defineProperty(msg, 'reply', {
+            writable: false,
+            value: (err, res) => {
+                return this._asserted()
+                    .then((ch) => reply(ch, msg, err, res))
+                    .then(() => msg.ack())
+                    .catch((err) => {
+                        this.logger.error(
+                            '[AMQP:rpc] Failed to reply back to client.',
+                            err);
+                    });
+            }
+        });
 
         return promise
             .wrap(() => fn(msg))
