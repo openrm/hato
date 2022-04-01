@@ -29,7 +29,11 @@ class RetryError extends MessageError {
 }
 
 function isRetryable(err) {
-    if (err instanceof RetryError ||
+    if (err instanceof TypeError ||
+        err instanceof ReferenceError ||
+        err instanceof SyntaxError ||
+        err instanceof RangeError ||
+        err instanceof RetryError ||
         RetryError.promotable(err) ||
         err.cause && err.cause.message.startsWith('Channel ended')) return false;
     else if (err instanceof MessageError) {
