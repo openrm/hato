@@ -1,16 +1,15 @@
 const assert = require('assert');
 const { Client, errors: { TimeoutError, MessageError } } = require('../..');
-const RPC = require('../rpc');
+const RPC = require('.');
+const Encoding = require('../encoding');
+
+const { URL = 'amqp://guest:guest@127.0.0.1:5672' } = process.env;
 
 describe('rpc plugin', () => {
     let client;
 
     beforeEach(async function() {
-        client = await new Client('amqp://guest:guest@127.0.0.1:5672', {
-            plugins: [
-                new RPC()
-            ]
-        }).start();
+        client = await new Client(URL, { plugins: [new RPC()] }).start();
     });
 
     afterEach(() => client && client.close());
@@ -93,5 +92,28 @@ describe('rpc plugin', () => {
                 done();
             })
             .catch(done);
+    });
+
+    context('plugin conflicts', () => {
+        let client;
+        beforeEach(async() => {
+            client = await new Client(URL, {
+                plugins: [
+                    new RPC(),
+                    new Encoding('json')
+                ]
+            }).start();
+        });
+        afterEach(() => client && client.close());
+        it('should not cause circular ref exceptions with encoding plugin', (done) => {
+            (async() => {
+                await client.subscribe('rpc.json', (msg) => {
+                    assert.deepStrictEqual(msg.content, { a: 1 });
+                    done();
+                    return true;
+                }).on('error', done);
+                await client.rpc('rpc.json', { a: 1 });
+            })();
+        });
     });
 });

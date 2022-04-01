@@ -4,6 +4,7 @@ const { symbolRetried } = require('../retry/errors');
 const errors = require('./errors');
 
 const symbolReplied = Symbol.for('hato.rpc.replied');
+const symbolTimeout = Symbol.for('hato.rpc.timeout');
 
 /**
  * @typedef {import('../../lib/api')} ContextChannel
@@ -31,7 +32,7 @@ function prepareRpc(plugin, routingKey, msg, { timeout = 0, ...options }) {
 
     return (resolve, reject) => {
         const listener = (msg) => {
-            clearTimeout(msg._timeout);
+            clearTimeout(msg[symbolTimeout]);
             errors.parse(msg)
                 .then((res) => Promise.resolve(cleanup()).then(() => res))
                 .then(resolve, reject);
@@ -39,7 +40,7 @@ function prepareRpc(plugin, routingKey, msg, { timeout = 0, ...options }) {
 
         const cleanup = () => {
             plugin._resp.removeListener(correlationId, listener);
-            clearTimeout(msg._timeout);
+            clearTimeout(msg[symbolTimeout]);
         };
 
         if (timeout > 0) {
@@ -47,7 +48,7 @@ function prepareRpc(plugin, routingKey, msg, { timeout = 0, ...options }) {
                 reject(new TimeoutError(timeout));
                 cleanup();
             };
-            msg._timeout = setTimeout(abort, timeout);
+            msg[symbolTimeout] = setTimeout(abort, timeout);
         }
 
         plugin._resp.on(correlationId, listener);
@@ -89,16 +90,14 @@ function consume(consume, queue, fn, options) {
 
         Object.defineProperty(msg, 'reply', {
             writable: false,
-            value: (err, res) => {
-                return this._asserted()
-                    .then((ch) => reply(ch, msg, err, res))
-                    .then(() => msg.ack())
-                    .catch((err) => {
-                        this.logger.error(
-                            '[AMQP:rpc] Failed to reply back to client.',
-                            err);
-                    });
-            }
+            value: (err, res) => this._asserted()
+                .then((ch) => reply(ch, msg, err, res))
+                .then(() => msg.ack())
+                .catch((err) => {
+                    this.logger.error(
+                        '[AMQP:rpc] Failed to reply back to client.',
+                        err);
+                })
         });
 
         return promise
