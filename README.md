@@ -12,7 +12,7 @@ A minimalist, customizeable AMQP framework
 
 ## Installation
 ```sh
-$ npm install hato
+$ npm install hato amqplib
 ```
 
 ## About
