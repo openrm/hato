@@ -40,4 +40,8 @@ function isRetryable(err) {
     return true;
 }
 
-module.exports = { isRetryable, RetryError };
+module.exports = {
+    symbolRetried: Symbol.for('hato.retry.retried'),
+    isRetryable,
+    RetryError
+};

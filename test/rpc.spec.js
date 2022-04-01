@@ -79,4 +79,30 @@ describe('rpc', function() {
             })
             .catch(done);
     });
+    it('should emit errors', function(done) {
+        client = new Client('amqp://guest:guest@127.0.0.1:5672', {
+            plugins: [
+                new Encoding('json'),
+                'rpc',
+                'retry',
+            ]
+        });
+
+        let count = 0;
+
+        client.subscribe('rpc.1', (msg) => {
+            count++;
+            throw new Error('expected');
+        }, { retries: 1 })
+            .catch(done);
+
+        client.start()
+            .then(() => client.rpc('rpc.1', Buffer.from('msg')))
+            .catch(err => {
+                assert.strictEqual(count, 2);
+                assert.strictEqual(err.message, 'expected');
+                done();
+            })
+            .catch(done);
+    });
 });
