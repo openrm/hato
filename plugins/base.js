@@ -19,6 +19,11 @@ const ContextChannel = require('../lib/api');
  *   ['api']?: Wrapper<{ new(...args: any): ContextChannel }>
  * }} PatchRegistry
  */
+/**
+ * @typedef {{
+ *   ['connection']?: (conn: Connection) => void
+ * }} HookRegistry
+ */
 
 module.exports = class Plugin {
 
@@ -30,6 +35,8 @@ module.exports = class Plugin {
         this.pluginName = name;
         /** @type {PatchRegistry} */
         this.scopes = {};
+        /** @type {HookRegistry} */
+        this.hooks = {};
         /** @type {Logger} */
         this.logger = console;
     }
