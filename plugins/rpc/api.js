@@ -1,3 +1,4 @@
+const util = require('util');
 const { promise } = require('../helpers');
 const { TimeoutError } = require('../../lib/errors');
 const { symbolRetried } = require('../retry/errors');
@@ -67,15 +68,17 @@ function reply(ch, msg, err, res) {
     if (msg[symbolReplied]) return;
     else msg[symbolReplied] = true;
 
+    const publish = typeof ch.waitForConfirms === 'function' ?
+        util.promisify(ch.publish).bind(ch) : ch.publish.bind(ch);
+
     if (err) {
         const { content, options } = errors.serialize(err);
         const headers = { ...msg.properties.headers, ...options.headers };
-        return ch.publish(
+        return publish(
             '', replyTo, content, { ...options, headers, correlationId });
     }
 
-    return ch
-        .publish('', replyTo, res, { correlationId });
+    return publish('', replyTo, res, { correlationId });
 }
 
 /**
