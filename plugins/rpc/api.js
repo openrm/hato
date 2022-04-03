@@ -1,11 +1,10 @@
 const util = require('util');
 const { promise } = require('../helpers');
-const { TimeoutError } = require('../../lib/errors');
+const { MessageError, TimeoutError } = require('../../lib/errors');
 const { symbolRetried } = require('../retry/errors');
 const errors = require('./errors');
 
 const symbolReplied = Symbol.for('hato.rpc.replied');
-const symbolTimeout = Symbol.for('hato.rpc.timeout');
 
 /**
  * @typedef {import('../../lib/api')} ContextChannel
@@ -17,46 +16,34 @@ const symbolTimeout = Symbol.for('hato.rpc.timeout');
  */
 
 /** @this {RPCChannel} */
-function rpc(plugin, routingKey, msg, { uid, ...options }) {
+function rpc(plugin, routingKey, msg, { timeout = 0, uid, ...options }) {
+    let listener, timer;
     const correlationId = uid.generate();
-
-    const publish = prepareRpc
-        .call(this, plugin, routingKey, msg, { correlationId, ...options });
-
-    return this._asserted()
-        .then(() => new Promise(publish));
-}
-
-/** @this {RPCChannel} */
-function prepareRpc(plugin, routingKey, msg, { timeout = 0, ...options }) {
-    const { correlationId } = options;
-
-    return (resolve, reject) => {
-        const listener = (msg) => {
-            clearTimeout(msg[symbolTimeout]);
-            errors.parse(msg)
-                .then((res) => Promise.resolve(cleanup()).then(() => res))
-                .then(resolve, reject);
-        };
-
-        const cleanup = () => {
-            plugin._resp.removeListener(correlationId, listener);
-            clearTimeout(msg[symbolTimeout]);
-        };
-
-        if (timeout > 0) {
-            const abort = () => {
-                reject(new TimeoutError(timeout));
-                cleanup();
-            };
-            msg[symbolTimeout] = setTimeout(abort, timeout);
-        }
-
-        plugin._resp.on(correlationId, listener);
-
-        const opts = { ...options, replyTo: plugin._replyTo };
-        return this.publish(routingKey, msg, opts).catch(reject);
-    };
+    const promises = [
+        new Promise((resolve, reject) => {
+            const msgErr = MessageError.blank();
+            plugin._resp.on(
+                correlationId,
+                listener = (msg) =>
+                    errors.isError(msg) ?
+                        reject(msgErr.setMessage(msg)) : resolve(msg));
+            return this.publish(
+                routingKey,
+                msg,
+                { ...options, correlationId, replyTo: plugin._replyTo })
+                .catch(reject);
+        })
+    ];
+    if (timeout > 0) {
+        const timeoutErr = new TimeoutError(timeout);
+        promises.push(new Promise((_, reject) =>
+            timer = setTimeout(() => reject(timeoutErr), timeout)));
+    }
+    return Promise.race(promises)
+        .finally(() => {
+            clearTimeout(timer);
+            plugin._resp.off(correlationId, listener);
+        });
 }
 
 function reply(ch, msg, err, res) {

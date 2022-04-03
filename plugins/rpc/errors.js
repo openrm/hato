@@ -5,13 +5,8 @@ const Keys = {
     error: 'x-rpc-error'
 };
 
-const parse = (msg) => new Promise((resolve, reject) => {
-    if (MessageError.is(msg) ||
-        msg.properties.headers[Keys.error]) {
-        const deserialized = JSON.parse(msg.content.toString());
-        reject(new MessageError(deserialized, msg));
-    } else resolve(msg);
-});
+const isError = (msg) =>
+    MessageError.is(msg) || msg.properties.headers[Keys.error];
 
 const extractHeaders = (err) =>
     err.originalHeaders[Keys.originalHeaders] || err.originalHeaders;
@@ -46,4 +41,4 @@ const serialize = (err) => {
     };
 };
 
-module.exports = { parse, serialize };
+module.exports = { isError, serialize };
