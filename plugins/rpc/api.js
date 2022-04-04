@@ -19,30 +19,33 @@ const symbolReplied = Symbol.for('hato.rpc.replied');
 function rpc(plugin, routingKey, msg, { timeout = 0, uid, ...options }) {
     let listener, timer;
     const correlationId = uid.generate();
-    const promises = [
-        new Promise((resolve, reject) => {
-            const msgErr = MessageError.blank();
-            plugin._resp.on(
-                correlationId,
-                listener = (msg) =>
-                    errors.isError(msg) ?
-                        reject(msgErr.setMessage(msg)) : resolve(msg));
-            return this.publish(
-                routingKey,
-                msg,
-                { ...options, correlationId, replyTo: plugin._replyTo })
-                .catch(reject);
-        })
-    ];
-    if (timeout > 0) {
-        const timeoutErr = new TimeoutError(timeout);
-        promises.push(new Promise((_, reject) =>
-            timer = setTimeout(() => reject(timeoutErr), timeout)));
-    }
-    return Promise.race(promises)
-        .finally(() => {
-            clearTimeout(timer);
-            plugin._resp.off(correlationId, listener);
+    return this._asserted()
+        .then(() => {
+            const promises = [
+                new Promise((resolve, reject) => {
+                    const msgErr = MessageError.blank();
+                    plugin._resp.on(
+                        correlationId,
+                        listener = (msg) =>
+                            errors.isError(msg) ?
+                                reject(msgErr.setMessage(msg)) : resolve(msg));
+                    return this.publish(
+                        routingKey,
+                        msg,
+                        { ...options, correlationId, replyTo: plugin._replyTo })
+                        .catch(reject);
+                })
+            ];
+            if (timeout > 0) {
+                const timeoutErr = new TimeoutError(timeout);
+                promises.push(new Promise((_, reject) =>
+                    timer = setTimeout(() => reject(timeoutErr), timeout)));
+            }
+            return Promise.race(promises)
+                .finally(() => {
+                    clearTimeout(timer);
+                    plugin._resp.off(correlationId, listener);
+                });
         });
 }
 
