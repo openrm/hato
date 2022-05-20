@@ -6,7 +6,7 @@ const inject = (delay, exchange) => (headers) => ({
     'retry-delay': delay
 });
 
-const count = (headers) => {
+const count = (headers = {}) => {
     const deaths = headers['x-death'] || [];
     const { name } = configs.exchange();
     return deaths

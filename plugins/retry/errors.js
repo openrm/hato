@@ -15,7 +15,7 @@ class RetryError extends MessageError {
         this.cause = cause;
     }
     static is(msg) {
-        return msg.properties.headers['x-retry-error'] === true;
+        return msg.properties.headers?.['x-retry-error'] === true;
     }
     static promotable(err) {
         return err instanceof MessageError && RetryError.is(err.msg);
@@ -37,7 +37,7 @@ function isRetryable(err) {
         RetryError.promotable(err) ||
         err.cause && err.cause.message.startsWith('Channel ended')) return false;
     else if (err instanceof MessageError) {
-        const { properties: { headers } } = err.msg;
+        const { properties: { headers = {} } } = err.msg;
         return headers['x-retry-error'] !== true;
     }
     // TODO(naggingant) more checks
