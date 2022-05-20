@@ -6,7 +6,7 @@ const Keys = {
 };
 
 const isError = (msg) =>
-    MessageError.is(msg) || msg.properties.headers[Keys.error];
+    MessageError.is(msg) || msg.properties.headers?.[Keys.error];
 
 const extractHeaders = (err) =>
     err.originalHeaders[Keys.originalHeaders] || err.originalHeaders;
