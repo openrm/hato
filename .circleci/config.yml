@@ -51,22 +51,6 @@ jobs:
           name: Run ESLint
           command: make lint
 
-  typecheck:
-    docker:
-      - image: node:16-alpine
-    steps:
-      - checkout
-      - *restore
-      - *make
-      - run:
-          name: Install Dependencies
-          command: make deps
-      - *cache
-      - run:
-          name: Type Check
-          command: make types
-
-
   node14:
     docker:
       - image: node:14-alpine
@@ -128,23 +112,18 @@ workflows:
   build:
     jobs:
       - lint
-      - typecheck
       - node14:
           requires:
             - lint
-            - typecheck
       - node17:
           requires:
             - lint
-            - typecheck
       - node18:
           requires:
             - lint
-            - typecheck
       - coverage:
           requires:
             - lint
-            - typecheck
       - report_coverage:
           requires:
             - coverage

@@ -6,16 +6,6 @@ const errors = require('./errors');
 
 const symbolReplied = Symbol.for('hato.rpc.replied');
 
-/**
- * @typedef {import('../../lib/api')} ContextChannel
- *
- * @typedef {object} RPCMethods
- * @property {any} rpc
- *
- * @typedef {ContextChannel & RPCMethods} RPCChannel
- */
-
-/** @this {RPCChannel} */
 function rpc(plugin, routingKey, msg, { timeout = 0, uid, ...options }) {
     let listener, timer;
     const correlationId = uid.generate();
@@ -71,9 +61,6 @@ function reply(ch, msg, err, res) {
     return publish('', replyTo, res, { correlationId });
 }
 
-/**
- * @this {RPCChannel}
- */
 function consume(consume, queue, fn, options) {
     const handler = (msg) => {
         // not a rpc
@@ -107,13 +94,6 @@ function consume(consume, queue, fn, options) {
         });
 }
 
-/**
- * @template T
- * @typedef {{ new(...args: any): T }} ConstructorOf
- */
-/**
- * @return {(original: ConstructorOf<ContextChannel>) => ConstructorOf<RPCChannel>}
- * */
 module.exports = function(plugin) {
     const config = plugin.options;
     return (constructor) =>
