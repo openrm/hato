@@ -8,14 +8,6 @@ const errors = require('./errors');
 
 const { symbolRetried, RetryError } = errors;
 
-/**
- * @typedef {import('../../lib/api')} ContextChannel
- */
-/**
- * @template T
- * @typedef {{ new(...args: any): T }} ConstructorOf
- */
-
 function assertDelayQueue(delay, exchange) {
     const { name, options } = configs.queue({ delay, exchange });
     const { name: ex } = configs.exchange();
@@ -27,7 +19,6 @@ function assertDelayQueue(delay, exchange) {
             })));
 }
 
-/** @this {ContextChannel} */
 function retry(msg, count, delay = 500) {
     const { fields: { exchange, routingKey } } = msg;
     const { name: delayExchange } = configs.exchange();
@@ -52,7 +43,6 @@ function nacked(msg) {
     else return state[0];
 }
 
-/** @this {ContextChannel} */
 function retryOnError(fn, retries, computeDelay) {
     return (msg) => {
         const count = context.count(msg.properties.headers);
@@ -104,7 +94,6 @@ module.exports = class extends Plugin {
         this.scopes[API] = this.handlePubsub();
     }
 
-    /** @return {(original: ConstructorOf<ContextChannel>) => ConstructorOf<ContextChannel>} */
     handlePubsub() {
         const plugin = this;
 

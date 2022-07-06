@@ -38,15 +38,6 @@ const queueName = (binding, exchange, service) => {
 
 module.exports = class ServiceContext extends Plugin {
 
-    /**
-     * @typedef {object} ServiceContextConfig
-     * @property {{ options?: object }=} queue
-     * @property {string=} name
-     * @property {string=} version
-     * @property {string=} instanceId
-     * @property {string=} namespace
-     */
-    /** @param {ServiceContextConfig} config */
     constructor({ queue = {}, ...service } = {}) {
         super('service');
         this.defaultOptions = queue.options;

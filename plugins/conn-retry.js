@@ -15,7 +15,6 @@ module.exports = class extends Plugin {
         this.options = options;
         this.timeouts = [];
 
-        /** @type {any[]} */
         this.termSignals = ['SIGINT', 'SIGTERM'];
     }
 

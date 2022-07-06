@@ -51,11 +51,6 @@ module.exports = {
         forwardAll: forwardAllEvents
     },
     promise: {
-        /**
-         * @template T
-         * @param {(msg: any) => Promise<T>} fn
-         * @return {Promise<T>}
-         * */
         wrap: (fn) => Promise.resolve().then(fn)
     },
     expose: (src, dst, ...members) => {

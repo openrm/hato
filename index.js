@@ -7,23 +7,9 @@ const plugins = require('./plugins');
 
 
 //
-// Types
-//
-
-/**
- * @typedef {import('./lib').IClient} Client
- * @typedef {import('./lib').Plugin} Plugin
- * @typedef {import('./lib').Options & { plugins?: (Plugin | string)[] }} Options
- */
-
-
-//
 // Plugins
 //
 
-/**
- * @type {{ [key: string]: { new(): Plugin } }}
- */
 const Plugins = {
     gracefulShutdown: plugins.GracefulShutdown,
     connectionRetry: plugins.ConnectionRetry,
@@ -35,10 +21,6 @@ const Plugins = {
     retry: plugins.Retry
 };
 
-/**
- * @param {(Plugin | string)[]} plugins
- * @return {Plugin[]}
- */
 const resolvePlugins = (plugins) => plugins
     .filter(Boolean)
     .map((plugin) => {
@@ -52,11 +34,6 @@ const resolvePlugins = (plugins) => plugins
 // Exports
 //
 
-/**
- * @param {string | object} [url]
- * @param {object} [options]
- * @return {Promise<Client>}
- */
 module.exports.connect = (url, options) => Client.start(url, {
     logger: console,
     plugins: resolvePlugins([
@@ -71,20 +48,10 @@ module.exports.connect = (url, options) => Client.start(url, {
     ...options
 });
 
-/**
- * @param {string | object} [url]
- * @param {Options} [options]
- * @return {Client}
- */
 module.exports.Client = function(url, { plugins = [], ...options } = {}) {
     return Client(url, { plugins: resolvePlugins(plugins), ...options });
 };
 
-/**
- * @param {string | object} [url]
- * @param {Options} [options]
- * @return {Promise<Client>}
- */
 module.exports.Client.start = function(url, { plugins = [], ...options } = {}) {
     return Client.start(url, { plugins: resolvePlugins(plugins), ...options });
 };

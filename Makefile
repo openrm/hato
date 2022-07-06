@@ -1,6 +1,6 @@
 #!make
 
-.PHONY: deps test coverage lint lint-fix types
+.PHONY: deps test coverage lint lint-fix
 
 export NODE_ENV ?= test
 
@@ -23,6 +23,3 @@ lint:
 
 lint-fix:
 	@npx eslint index.js plugins lib --fix
-
-types:
-	@npx tsc -p .
