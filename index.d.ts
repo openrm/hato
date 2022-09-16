@@ -1,5 +1,4 @@
 import { type EventEmitter } from 'events'
-import type bunyan from 'bunyan'
 
 export as namespace hato;
 
@@ -58,8 +57,15 @@ export const plugins: {
  * Client
  */
 
+interface Logger {
+    debug(message: string): void
+    info(message: string): void
+    warn(message: string): void
+    error(message: string): void
+}
+
 type Options = {
-    logger: bunyan
+    logger: Logger
     plugins: Array<Plugin>
 }
 
