@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "allowJs": true,
+        "checkJs": true,
+        "target": "es6",
+        "module": "commonjs",
+        "esModuleInterop": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "lib": [
+            "es6"
+        ],
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "strictNullChecks": true,
+        "declaration": true,
+        "noEmit": true
+    },
+    "include": ["test/**/*.ts"],
+    "files": ["index.d.ts"]
+}

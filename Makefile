@@ -1,6 +1,6 @@
 #!make
 
-.PHONY: deps test coverage lint lint-fix
+.PHONY: deps types test coverage lint lint-fix
 
 export NODE_ENV ?= test
 
@@ -8,6 +8,9 @@ node_modules: package.json
 	@npm install
 
 deps: node_modules
+
+types:
+	@npx tsc
 
 test:
 	@npx mocha "test/**/*.js" "**/*.spec.js"
