@@ -10,9 +10,6 @@
         "lib": [
             "es6"
         ],
-        "noImplicitAny": true,
-        "noImplicitThis": true,
-        "strictNullChecks": true,
         "declaration": true,
         "noEmit": true
     },
