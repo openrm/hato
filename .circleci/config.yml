@@ -35,7 +35,7 @@ test: &test
     - *wait
     - run:
         name: Run Tests
-        command: make test
+        command: make types test
 
 jobs:
   lint:

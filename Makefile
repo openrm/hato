@@ -1,6 +1,6 @@
 #!make
 
-.PHONY: deps test coverage lint lint-fix
+.PHONY: deps types test coverage lint lint-fix
 
 export NODE_ENV ?= test
 
@@ -9,14 +9,17 @@ node_modules: package.json
 
 deps: node_modules
 
+types:
+	@npx tsc
+
 test:
-	@npx mocha "test/**/*.js" "**/*.spec.js"
+	@npx mocha
 
 tdd:
-	@npx mocha "test/**/*.js" "**/*.spec.js" --watch
+	@npx mocha --watch
 
 coverage:
-	@npx nyc -x "test/*" -x "**/*.spec.js" --reporter=lcov --reporter=text-lcov --reporter=text $(MAKE) -s test
+	@npx nyc mocha
 
 lint:
 	@npx eslint index.js plugins lib
