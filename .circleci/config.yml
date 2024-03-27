@@ -1,7 +1,7 @@
 version: 2
 
 rabbitmq: &rabbitmq
-  image: rabbitmq:3-alpine
+  image: rabbitmq:3.11-alpine
 
 restore: &restore
   restore_cache:
