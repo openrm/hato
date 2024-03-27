@@ -39,7 +39,7 @@ function rpc(plugin, routingKey, msg, { timeout = 0, uid, ...options }) {
         });
 }
 
-function reply(ch, msg, err, res) {
+function reply(ch, msg, err, res, options) {
     const {
         replyTo,
         correlationId
@@ -52,13 +52,13 @@ function reply(ch, msg, err, res) {
         util.promisify(ch.publish).bind(ch) : ch.publish.bind(ch);
 
     if (err) {
-        const { content, options } = errors.serialize(err);
-        const headers = { ...msg.properties.headers, ...options.headers };
+        const { content, options: errOptions } = errors.serialize(err);
+        const headers = { ...msg.properties.headers, ...errOptions.headers };
         return publish(
-            '', replyTo, content, { ...options, headers, correlationId });
+            '', replyTo, content, { ...options, ...errOptions, headers, correlationId });
     }
 
-    return publish('', replyTo, res, { correlationId });
+    return publish('', replyTo, res, { ...options, correlationId });
 }
 
 function consume(consume, queue, fn, options) {
@@ -70,8 +70,8 @@ function consume(consume, queue, fn, options) {
 
         Object.defineProperty(msg, 'reply', {
             writable: false,
-            value: (err, res) => this._asserted()
-                .then((ch) => reply(ch, msg, err, res))
+            value: (err, res, opts) => this._asserted()
+                .then((ch) => reply(ch, msg, err, res, opts))
                 .then(() => msg.ack())
                 .catch((err) => {
                     this.logger.error(
