@@ -47,6 +47,11 @@ function retryOnError(fn, retries, computeDelay) {
     return (msg) => {
         const count = context.count(msg.properties.headers);
 
+        if ('x-retry-limit' in msg.properties.headers) {
+            const parsed = parseInt(msg.properties.headers['x-retry-limit']);
+            retries = isNaN(parsed) ? retries : parsed;
+        }
+
         return Promise.resolve()
             .then(() => fn(msg))
             .catch((err) => {

@@ -40,6 +40,31 @@ describe('retry plugin', () => {
             .catch(done);
     });
 
+    it('should retry until it reaches the limit', (done) => {
+        let failed = 0;
+        const override = 5;
+        client
+            .subscribe('it.fails', (msg) => {
+                assert.strictEqual(msg.content.toString(), 'hello');
+                if (failed++ < override) throw 'fail!';
+                else {
+                    assert.strictEqual(failed - 1, override);
+                    assert.ok(failed > 0);
+                    done();
+                }
+            }, { retry: { strategy: 'exponential', base: 1.5 } })
+            .on('error', (err) => {
+                if (err !== 'fail!') done(err);
+            })
+            .then(() => client
+                .publish('it.fails', Buffer.from('hello'), {
+                    headers: {
+                        'x-retry-limit': override
+                    }
+                }))
+            .catch(done);
+    });
+
     it('should dead-letter failed messages', (done) => {
         client
             .subscribe('rpc.1', () => {
