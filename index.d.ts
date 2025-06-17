@@ -104,7 +104,7 @@ interface API {
     assert(enable: boolean): this
     prefetch(count: number): this
     type(type: ExchangeType): this
-    exchange(exchange: string, type: ExchangeType, options?: amqplib.Options.AssertExchange): this
+    exchange(exchange: string, type?: ExchangeType, options?: amqplib.Options.AssertExchange): this
     queue(name: string, options?: amqplib.Options.AssertQueue): this
     subscribe(pattern: string, fn: (msg: ConsumeMessage) => void): Consumer
     consume(pattern: string, fn: (msg: ConsumeMessage) => void): Consumer
