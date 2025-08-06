@@ -106,8 +106,8 @@ interface API {
     type(type: ExchangeType): this
     exchange(exchange: string, type?: ExchangeType, options?: amqplib.Options.AssertExchange): this
     queue(name: string, options?: amqplib.Options.AssertQueue): this
-    subscribe(pattern: string, fn: (msg: ConsumeMessage) => void): Consumer
-    consume(pattern: string, fn: (msg: ConsumeMessage) => void): Consumer
+    subscribe(pattern: string, fn: (msg: ConsumeMessage) => void, options?: amqplib.Options.Consume): Consumer
+    consume(pattern: string, fn: (msg: ConsumeMessage) => void, options?: amqplib.Options.Consume): Consumer
     cancel(consumerTag: string): Promise<amqplib.Replies.Empty>
     publish(routingKey: string, content: Buffer, options?: amqplib.Options.Publish): Promise<void>;
 }
