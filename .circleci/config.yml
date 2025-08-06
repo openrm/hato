@@ -1,4 +1,7 @@
-version: 2
+version: 2.1
+
+orbs:
+  qlty: qltysh/qlty-orb@0.0.10
 
 rabbitmq: &rabbitmq
   image: rabbitmq:3.11-alpine
@@ -40,7 +43,7 @@ test: &test
 jobs:
   lint:
     docker:
-      - image: node:16-alpine
+      - image: node:24-alpine
     steps:
       - checkout
       - run:
@@ -51,27 +54,27 @@ jobs:
           name: Run ESLint
           command: make lint
 
-  node14:
+  node24:
     docker:
-      - image: node:14-alpine
+      - image: node:24-alpine
       - *rabbitmq
     <<: *test
 
-  node17:
+  node22:
     docker:
-      - image: node:16-alpine
+      - image: node:22-alpine
       - *rabbitmq
     <<: *test
 
-  node18:
+  node20:
     docker:
-      - image: node:16-alpine
+      - image: node:20-alpine
       - *rabbitmq
     <<: *test
 
   coverage:
     docker:
-      - image: node:16-alpine
+      - image: node:24-alpine
       - *rabbitmq
     steps:
       - checkout
@@ -93,35 +96,30 @@ jobs:
 
   report_coverage:
     docker:
-      - image: node:16-alpine
+      - image: cimg/node:24.4
     steps:
-      - run: apk add --no-cache git ca-certificates curl
-
-      - attach_workspace:
-          at: /tmp/coverage
-
       - checkout
-
-      - run: curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > reporter
-      - run: chmod +x reporter
-      - run: ./reporter format-coverage -t lcov /tmp/coverage/lcov.info -o codeclimate.json
-      - run: ./reporter upload-coverage -i codeclimate.json
+      - attach_workspace:
+          at: coverage
+      - qlty/coverage_publish:
+          files: coverage/lcov.info
 
 workflows:
   version: 2
   build:
     jobs:
       - lint
-      - node14:
+      - node24:
           requires:
             - lint
-      - node17:
+      - node22:
           requires:
             - lint
-      - node18:
+      - node20:
           requires:
             - lint
       - coverage:
+          context: qlty
           requires:
             - lint
       - report_coverage:
