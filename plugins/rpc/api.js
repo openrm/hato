@@ -27,7 +27,7 @@ function rpc(plugin, routingKey, msg, { timeout = 0, uid, ...options }) {
                 })
             ];
             if (timeout > 0) {
-                const timeoutErr = new TimeoutError(timeout);
+                const timeoutErr = new TimeoutError(timeout, routingKey);
                 promises.push(new Promise((_, reject) =>
                     timer = setTimeout(() => reject(timeoutErr), timeout)));
             }
