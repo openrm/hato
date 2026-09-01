@@ -3,9 +3,10 @@ const { Scopes: { PUBLICATION, SUBSCRIPTION } } = require('../lib/constants');
 
 module.exports = class extends Plugin {
 
-    constructor(type = 'json') {
+    constructor(type = 'json', options = {}) {
         super('encoding');
         this.type = type;
+        this.options = options;
     }
 
     init() {
@@ -39,22 +40,25 @@ module.exports = class extends Plugin {
 
     encode() {
         const plugin = this;
+        const { keepBuffer = true } = plugin.options;
         return (publish) => (exchange, routingKey, content, options, callback) => {
-            switch (plugin.type) {
-            case 'json':
-                if (Buffer.isBuffer(content)) content = content.toString();
-                try {
-                    content = JSON.stringify(content);
-                    options.contentType = 'application/json';
-                } catch (e) {
-                    plugin.logger.warn(
-                        '[AMQP:encoding] JSON serialization failed with an exception.',
-                        e.message);
+            if (!keepBuffer || !Buffer.isBuffer(content)) {
+                switch (plugin.type) {
+                case 'json':
+                    if (Buffer.isBuffer(content)) content = content.toString();
+                    try {
+                        content = JSON.stringify(content);
+                        options.contentType = 'application/json';
+                    } catch (e) {
+                        plugin.logger.warn(
+                            '[AMQP:encoding] JSON serialization failed with an exception.',
+                            e.message);
+                    }
+                    break;
+                default:
                 }
-                break;
-            default:
+                content = Buffer.from(content);
             }
-            content = Buffer.from(content);
             return publish(exchange, routingKey, content, options, callback);
         };
     }
