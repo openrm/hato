@@ -7,6 +7,11 @@ const inject = (delay, exchange) => (headers) => ({
 });
 
 const count = (headers = {}) => {
+    // RabbitMQ >= 4 drops client-provided x-death on publish, so x-death
+    // cannot accumulate across republishes; prefer our own counter.
+    const retried = parseInt(headers['x-retry-count']);
+    if (!isNaN(retried)) return retried;
+
     const deaths = headers['x-death'] || [];
     const { name } = configs.exchange();
     return deaths
