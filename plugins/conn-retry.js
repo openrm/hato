@@ -36,7 +36,11 @@ module.exports = class extends Plugin {
                 const destroy = this.destroy.bind(this);
                 this.termSignals.forEach((sig) => process.once(sig, destroy));
 
-                return connect(...args)
+                // an array of urls is rotated through, one per attempt
+                const [url, ...rest] = args;
+                const target = Array.isArray(url) ? url[c % url.length] : url;
+
+                return connect(target, ...rest)
                     .catch((err) => {
                         if (c + 1 >= retries) throw err;
 

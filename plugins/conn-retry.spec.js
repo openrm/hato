@@ -85,4 +85,26 @@ describe('conn-retry plugin', () => {
             done();
         }, 30);
     });
+
+    it('should rotate through an array of urls, one per attempt', (done) => {
+        const urls = ['amqp://a', 'amqp://b'];
+        const seen = [];
+        const connect = (url, opts) => new Promise((resolve, reject) => {
+            seen.push([url, opts]);
+            setImmediate(() => seen.length < 3 ? reject(new Error('x')) : resolve('conn'));
+        });
+
+        const plugin = new ConnectionRetry({ retries: 3, min: 5, base: 1.5 }).enable();
+        plugin.install(Scopes.CONNECTION)(connect)(urls, { o: 1 })
+            .then((conn) => {
+                assert.strictEqual(conn, 'conn');
+                assert.deepStrictEqual(seen, [
+                    ['amqp://a', { o: 1 }],
+                    ['amqp://b', { o: 1 }],
+                    ['amqp://a', { o: 1 }]
+                ]);
+                done();
+            })
+            .catch(done);
+    });
 });
