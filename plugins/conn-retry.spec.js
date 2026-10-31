@@ -86,7 +86,7 @@ describe('conn-retry plugin', () => {
         }, 30);
     });
 
-    it('should rotate through an array of urls, one per attempt', (done) => {
+    it('should rotate through an array of urls, one per attempt, in order with shuffle: false', (done) => {
         const urls = ['amqp://a', 'amqp://b'];
         const seen = [];
         const connect = (url, opts) => new Promise((resolve, reject) => {
@@ -94,7 +94,7 @@ describe('conn-retry plugin', () => {
             setImmediate(() => seen.length < 3 ? reject(new Error('x')) : resolve('conn'));
         });
 
-        const plugin = new ConnectionRetry({ retries: 3, min: 5, base: 1.5 }).enable();
+        const plugin = new ConnectionRetry({ retries: 3, min: 5, base: 1.5, shuffle: false }).enable();
         plugin.install(Scopes.CONNECTION)(connect)(urls, { o: 1 })
             .then((conn) => {
                 assert.strictEqual(conn, 'conn');
@@ -103,6 +103,28 @@ describe('conn-retry plugin', () => {
                     ['amqp://b', { o: 1 }],
                     ['amqp://a', { o: 1 }]
                 ]);
+                done();
+            })
+            .catch(done);
+    });
+
+    it('should start from a random url by default', (done) => {
+        const urls = ['amqp://a', 'amqp://b', 'amqp://c'];
+        const seen = [];
+        const connect = (url) => new Promise((resolve, reject) => {
+            seen.push(url);
+            setImmediate(() => seen.length < 3 ? reject(new Error('x')) : resolve('conn'));
+        });
+
+        const random = Math.random;
+        Math.random = () => 0.5; // offset 1
+        const plugin = new ConnectionRetry({ retries: 3, min: 5, base: 1.5 }).enable();
+        const attempt = plugin.install(Scopes.CONNECTION)(connect)(urls);
+        Math.random = random;
+
+        attempt
+            .then(() => {
+                assert.deepStrictEqual(seen, ['amqp://b', 'amqp://c', 'amqp://a']);
                 done();
             })
             .catch(done);

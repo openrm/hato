@@ -48,6 +48,8 @@ export namespace Plugins {
             min?: number
             max?: number
             base?: number
+            /** start from a random url when given an array (default: true) */
+            shuffle?: boolean
         }
         type Duplex = null;
         interface DLX {
