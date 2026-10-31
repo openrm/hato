@@ -48,6 +48,8 @@ export namespace Plugins {
             min?: number
             max?: number
             base?: number
+            /** start from a random url when given an array (default: true) */
+            shuffle?: boolean
         }
         type Duplex = null;
         interface DLX {
@@ -112,18 +114,24 @@ interface API {
     publish(routingKey: string, content: Buffer, options?: amqplib.Options.Publish): Promise<void>;
 }
 
+/**
+ * A url (or options object) for amqplib. An array of them is only supported
+ * when the `conn-retry` plugin is enabled: each attempt uses the next entry.
+ */
+type ConnectUrl = Parameters<typeof amqplib.connect>[0] | Parameters<typeof amqplib.connect>[0][]
+
 interface Options {
     logger?: Logger
     plugins?: (Plugins.Plugin<any> | string)[]
 }
 
 export interface IClient extends events.EventEmitter, API {
-    new(url: Parameters<typeof amqplib.connect>[0], options?: Options): this
-    start(url: Parameters<typeof amqplib.connect>[0], options?: Options): Promise<this>
+    new(url: ConnectUrl, options?: Options): this
+    start(url: ConnectUrl, options?: Options): Promise<this>
 
     start(): Promise<this>
     close(): Promise<void>
 }
 
 export const Client: IClient;
-export function connect(url: Parameters<typeof amqplib.connect>[0], options?: Options): Promise<IClient>
+export function connect(url: ConnectUrl, options?: Options): Promise<IClient>

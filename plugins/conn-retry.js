@@ -19,24 +19,30 @@ module.exports = class extends Plugin {
     }
 
     init() {
-        const { retries = 5 } = this.options;
+        const { retries = 5, shuffle = true } = this.options;
         const backoff = createBackoff(this.options);
 
-        this.scopes[CONNECTION] = this.retry(retries, backoff);
+        this.scopes[CONNECTION] = this.retry(retries, backoff, shuffle);
 
         this.stop = false;
     }
 
-    retry(retries, backoff) {
+    retry(retries, backoff, shuffle = true) {
         return (connect) => {
-            const retryable = (c, ...args) => {
+            const retryable = (c, offset, ...args) => {
                 if (0 < c) this.logger.debug(
                     '[AMQP:conn-retry] Retrying to connect...');
 
                 const destroy = this.destroy.bind(this);
                 this.termSignals.forEach((sig) => process.once(sig, destroy));
 
-                return connect(...args)
+                // an array of urls is rotated through, one per attempt,
+                // starting from a per-connect offset
+                const [url, ...rest] = args;
+                const target = Array.isArray(url)
+                    ? url[(offset + c) % url.length] : url;
+
+                return connect(target, ...rest)
                     .catch((err) => {
                         if (c + 1 >= retries) throw err;
 
@@ -49,7 +55,7 @@ module.exports = class extends Plugin {
                             if (this.stop) return reject(new Error('Retries halted'));
 
                             const timer = setTimeout(() =>
-                                retryable(c + 1, ...args).then(resolve)
+                                retryable(c + 1, offset, ...args).then(resolve)
                                     .catch(reject), wait);
 
                             this.timeouts.push(timer);
@@ -60,7 +66,13 @@ module.exports = class extends Plugin {
                     });
             };
 
-            return retryable.bind(null, 0);
+            return (...args) => {
+                const [url] = args;
+                const offset = shuffle && Array.isArray(url) && url.length
+                    ? Math.floor(Math.random() * url.length) : 0;
+
+                return retryable(0, offset, ...args);
+            };
         };
     }
 
