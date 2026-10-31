@@ -4,7 +4,7 @@ orbs:
   qlty: qltysh/qlty-orb@0.0.10
 
 rabbitmq: &rabbitmq
-  image: rabbitmq:3.11-alpine
+  image: rabbitmq:4-alpine
 
 restore: &restore
   restore_cache:

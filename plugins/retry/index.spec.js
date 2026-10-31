@@ -65,6 +65,51 @@ describe('retry plugin', () => {
             .catch(done);
     });
 
+    it('should stop retrying once the limit is reached', (done) => {
+        let calls = 0;
+        client
+            .subscribe('it.always.fails', () => {
+                calls++;
+                throw 'fail!';
+            })
+            .on('error', (err) => {
+                if (!(err instanceof RetryError)) return;
+                // wait to make sure no further retries are delivered
+                setTimeout(() => {
+                    try {
+                        assert.strictEqual(calls, retries + 1);
+                        done();
+                    } catch (e) {
+                        done(e);
+                    }
+                }, 500);
+            })
+            .then(() => client
+                .publish('it.always.fails', Buffer.from('hello')))
+            .catch(done);
+    });
+
+    it('should increment x-retry-count on each retry', (done) => {
+        const seen = [];
+        client
+            .subscribe('it.counts', (msg) => {
+                seen.push(msg.properties.headers['x-retry-count']);
+                if (seen.length <= retries) throw 'fail!';
+
+                try {
+                    assert.deepStrictEqual(seen, [undefined, 1, 2, 3]);
+                    done();
+                } catch (e) {
+                    done(e);
+                }
+            })
+            .on('error', (err) => {
+                if (err !== 'fail!') done(err);
+            })
+            .then(() => client.publish('it.counts', Buffer.from('hello')))
+            .catch(done);
+    });
+
     it('should dead-letter failed messages', (done) => {
         client
             .subscribe('rpc.1', () => {
