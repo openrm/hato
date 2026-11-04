@@ -76,6 +76,20 @@ client
     .catch(console.error);
 ```
 
+## TLS
+
+Use an `amqps://` URL and the client reads three environment variables, each a PEM or the path of a file:
+
+| Variable | Socket option | For |
+|---|---|---|
+| `RABBITMQ_SSL_CA` | `ca` | verifying the broker (a private CA; without it the system roots are used) |
+| `RABBITMQ_SSL_CERT`, `RABBITMQ_SSL_KEY` | `cert`, `key` | mutual TLS: the client certificate (the two go together) |
+
+Nothing changes when they are not set. An option passed to `Client` (`ca`, `cert`, `key`, ...) wins over the variable. The files are read when
+the client is created, so a renewed certificate needs a restart; an unreadable file or a certificate without its key throws then, not on the
+first connection. With the variables set and an `amqp://` URL the connection is **not** encrypted (amqplib ignores the certificates):
+the client logs a warning. `hato.tlsFromEnv()` returns the options for code that calls amqplib itself.
+
 ## Running Tests
 
 Make sure you have a message broker running. The tests expect [RabbitMQ](https://www.rabbitmq.com/).

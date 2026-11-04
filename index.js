@@ -4,6 +4,7 @@
 
 const Client = require('./lib');
 const plugins = require('./plugins');
+const { tlsFromEnv } = require('./lib/tls');
 
 
 //
@@ -33,6 +34,8 @@ const resolvePlugins = (plugins) => plugins
 //
 // Exports
 //
+
+module.exports.tlsFromEnv = tlsFromEnv;
 
 module.exports.connect = (url, options) => Client.start(url, {
     logger: console,

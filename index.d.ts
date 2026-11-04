@@ -135,3 +135,10 @@ export interface IClient extends events.EventEmitter, API {
 
 export const Client: IClient;
 export function connect(url: ConnectUrl, options?: Options): Promise<IClient>
+
+/**
+ * The TLS socket options that RABBITMQ_SSL_CA, RABBITMQ_SSL_CERT and RABBITMQ_SSL_KEY ask for (each a PEM or the path of a file),
+ * which a client applies by itself under the options it is given. Empty when none is set. Throws on an unreadable file and on a
+ * certificate without its key.
+ */
+export function tlsFromEnv(env?: Record<string, string | undefined>): { ca?: string | Buffer, cert?: string | Buffer, key?: string | Buffer }
