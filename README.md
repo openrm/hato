@@ -76,6 +76,40 @@ client
     .catch(console.error);
 ```
 
+## Shutting down
+
+`GracefulShutdown` closes the connection on `SIGINT` and `SIGTERM`, once the messages being processed are done: the subscriptions are cancelled first so that no new message is taken, the messages being processed are waited for (up to 30 seconds), and only then is the connection closed.
+
+```js
+const { Client, plugins } = require('hato');
+
+const client = new Client(BROKER_URL, {
+    plugins: [
+        new plugins.GracefulShutdown({ drain: { timeout: 25000 } }), // the default is 30000 ms
+        // ...
+    ]
+});
+```
+
+The plugin used to close the connection at once, and a message that was being processed lost its channel: whatever its handler still did (acknowledge, publish, call another service) failed. `drain: false` brings that back.
+
+A whole handler is waited for, whichever plugins surround it: a retry being scheduled by `Retry` and a reply being sent by `RPC` count as part of it. A message still in progress at the timeout is not acknowledged, so the broker redelivers it. The plugin position in the list does not matter.
+
+The process has to be given the time: with Kubernetes, `terminationGracePeriodSeconds` has to exceed the timeout.
+
+The plugin handles `SIGINT` and `SIGTERM`; `signals` takes the list to handle instead (`{ signals: ['SIGTERM'] }`), and `false` or `[]` none. An application that handles the signals itself (it has an HTTP server to stop, for instance) turns them off and uses the instance:
+
+```js
+const graceful = new plugins.GracefulShutdown({ signals: false });
+
+process.on('SIGTERM', async() => {
+    await graceful.stopConsuming();       // the RPC reply queue is left alone: the messages in progress may wait for it
+    const drained = await graceful.drain(25000); // false if the messages are still in progress at the timeout
+    await client.close();                // closes the channels, then the connection: close the connection
+                                         // with a message acknowledged a moment ago and the broker requeues it
+});
+```
+
 ## Running Tests
 
 Make sure you have a message broker running. The tests expect [RabbitMQ](https://www.rabbitmq.com/).
