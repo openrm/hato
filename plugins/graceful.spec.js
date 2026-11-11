@@ -297,6 +297,50 @@ describe('graceful plugin: draining', () => {
             assert.deepStrictEqual(order, ['cancel', 'handled']);
         });
 
+        it('handles SIGINT and SIGTERM by default', async() => {
+            plugin = enabled();
+            await connect();
+
+            assert.deepStrictEqual(plugin.options.signals, ['SIGINT', 'SIGTERM']);
+            assert.strictEqual(process.listenerCount('SIGINT'), 1);
+            assert.strictEqual(process.listenerCount('SIGTERM'), 1);
+            assert.strictEqual(process.listenerCount('SIGHUP'), 0);
+        });
+
+        it('handles the signals of the list, and only those', async() => {
+            plugin = enabled({ signals: ['SIGTERM', 'SIGHUP'] });
+            await connect();
+
+            assert.strictEqual(process.listenerCount('SIGTERM'), 1);
+            assert.strictEqual(process.listenerCount('SIGHUP'), 1);
+            assert.strictEqual(process.listenerCount('SIGINT'), 0);
+
+            process.emit('SIGINT');
+            await sleep(20);
+            assert.ok(!conn.close.called, 'a signal that is not in the list closed the connection');
+
+            process.emit('SIGHUP');
+            await sleep(20);
+            assert.ok(conn.close.calledOnce);
+        });
+
+        it('takes an empty list for no signal at all', async() => {
+            plugin = enabled({ signals: [] });
+            await connect();
+
+            assert.strictEqual(process.listenerCount('SIGINT'), 0);
+            assert.strictEqual(process.listenerCount('SIGTERM'), 0);
+        });
+
+        it('listens once for a signal named twice, and stops listening when the connection is closed', async() => {
+            plugin = enabled({ signals: ['SIGTERM', 'SIGTERM'] });
+            await connect();
+            assert.strictEqual(process.listenerCount('SIGTERM'), 1);
+
+            conn.emit('close');
+            assert.strictEqual(process.listenerCount('SIGTERM'), 0);
+        });
+
         it('closes only once, however many signals come', async() => {
             plugin = enabled({ drain: true });
             await subscribe(() => {});
@@ -320,5 +364,21 @@ describe('graceful plugin: draining', () => {
             assert.ok(conn.close.calledOnce);
             assert.deepStrictEqual(order, ['close']);
         });
+    });
+});
+
+describe('graceful plugin: signals option', () => {
+    it('refuses what it cannot handle, when it is created', () => {
+        assert.throws(() => new GracefulShutdown({ signals: ['SIGTERM', 'SIGNOPE'] }), /cannot handle the signal SIGNOPE/);
+        assert.throws(() => new GracefulShutdown({ signals: ['SIGKILL'] }), /cannot handle the signal SIGKILL/);
+        assert.throws(() => new GracefulShutdown({ signals: ['SIGSTOP'] }), /cannot handle the signal SIGSTOP/);
+        assert.throws(() => new GracefulShutdown({ signals: 'SIGTERM' }), /boolean or a list/);
+    });
+
+    it('accepts true, false and a list', () => {
+        assert.deepStrictEqual(new GracefulShutdown().options.signals, ['SIGINT', 'SIGTERM']);
+        assert.deepStrictEqual(new GracefulShutdown({ signals: true }).options.signals, ['SIGINT', 'SIGTERM']);
+        assert.deepStrictEqual(new GracefulShutdown({ signals: false }).options.signals, []);
+        assert.deepStrictEqual(new GracefulShutdown({ signals: ['SIGUSR2'] }).options.signals, ['SIGUSR2']);
     });
 });

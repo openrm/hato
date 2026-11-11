@@ -59,10 +59,11 @@ export namespace Plugins {
              */
             drain?: boolean | { timeout?: number }
             /**
-             * Default: `true`. `false` does not handle SIGINT and SIGTERM: the application does, with
-             * `stopConsuming()` and `drain()` of the plugin instance, and closes the client itself.
+             * The signals to handle. Default: `true`, which is `['SIGINT', 'SIGTERM']`. `false` or `[]`
+             * handles none: the application does, with `stopConsuming()` and `drain()` of the plugin
+             * instance, and closes the client itself.
              */
-            signals?: boolean
+            signals?: boolean | NodeJS.Signals[]
         }
         interface ConnectionRetry {
             retries?: number

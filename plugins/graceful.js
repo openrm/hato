@@ -1,7 +1,30 @@
+const { constants: { signals: SIGNALS } } = require('os');
+
 const Plugin = require('./base');
 const { Scopes } = require('../lib/constants');
 
 const DEFAULT_DRAIN_TIMEOUT = 30000;
+const DEFAULT_SIGNALS = ['SIGINT', 'SIGTERM'];
+
+// What `signals` stands for: true is the default list, false (or an empty list) none, a list is used as given
+function resolveSignals(signals) {
+    if (signals === true) return DEFAULT_SIGNALS;
+    if (!signals) return [];
+
+    if (!Array.isArray(signals)) {
+        throw new TypeError('GracefulShutdown: signals must be a boolean or a list of signal names');
+    }
+
+    for (const name of signals) {
+        // SIGKILL and SIGSTOP cannot be handled, and node refuses to listen for them
+        if (!(name in SIGNALS) || name === 'SIGKILL' || name === 'SIGSTOP') {
+            throw new TypeError(`GracefulShutdown: cannot handle the signal ${name}`);
+        }
+    }
+
+    return [...new Set(signals)];
+}
+
 
 /**
  * Closes the connection when the process is told to stop (SIGINT, SIGTERM), after the messages being
@@ -15,8 +38,9 @@ const DEFAULT_DRAIN_TIMEOUT = 30000;
  * processed loses its channel, and whatever the handler still does with it (acknowledge, publish, call
  * another service) fails. `drain: { timeout }` sets the time to wait.
  *
- * `signals: false` leaves the signals to the application, which then calls `stopConsuming()` and `drain()`
- * itself, and closes the client when it is ready (it may have other things to stop first).
+ * `signals` is the list of the signals to handle, `['SIGINT', 'SIGTERM']` by default (`true`). `false` or `[]`
+ * leaves them to the application, which then calls `stopConsuming()` and `drain()` itself, and closes the
+ * client when it is ready (it may have other things to stop first).
  *
  * Every handler of every subscription is tracked, whatever the plugins around it do (the whole handler
  * counts, including a retry being scheduled or an RPC reply being sent). `stopConsuming()` and `drain()`
@@ -33,7 +57,7 @@ module.exports = class GracefulShutdown extends Plugin {
         const { drain = true, signals = true } = options ?? {};
 
         this.options = {
-            signals,
+            signals: resolveSignals(signals),
             drain: drain && {
                 timeout: DEFAULT_DRAIN_TIMEOUT,
                 ...(drain === true ? {} : drain)
@@ -136,14 +160,12 @@ module.exports = class GracefulShutdown extends Plugin {
             return this._shutdown(conn);
         };
 
-        if (!this.options.signals) return conn;
+        if (!this.options.signals.length) return conn;
 
-        process.once('SIGINT', close);
-        process.once('SIGTERM', close);
+        this.options.signals.forEach((sig) => process.once(sig, close));
 
         conn.on('close', () => {
-            process.removeListener('SIGINT', close);
-            process.removeListener('SIGTERM', close);
+            this.options.signals.forEach((sig) => process.removeListener(sig, close));
         });
 
         return conn;

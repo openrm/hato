@@ -97,7 +97,7 @@ A whole handler is waited for, whichever plugins surround it: a retry being sche
 
 The process has to be given the time: with Kubernetes, `terminationGracePeriodSeconds` has to exceed the timeout.
 
-An application that handles the signals itself (it has an HTTP server to stop, for instance) turns the signals off and uses the instance:
+The plugin handles `SIGINT` and `SIGTERM`; `signals` takes the list to handle instead (`{ signals: ['SIGTERM'] }`), and `false` or `[]` none. An application that handles the signals itself (it has an HTTP server to stop, for instance) turns them off and uses the instance:
 
 ```js
 const graceful = new plugins.GracefulShutdown({ signals: false });
