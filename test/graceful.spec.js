@@ -61,6 +61,44 @@ describe('graceful shutdown: drain', function() {
         assert.strictEqual(messageCount, 1);
     });
 
+    // Acknowledging a message and then closing the connection loses the acknowledgement: the broker requeues the
+    // message, and it is processed again. The channels have to be closed first. (Through the signal path: that is
+    // where the connection is closed.)
+    it('does not lose the acknowledgement of a message that finishes while shutting down', async() => {
+        const plugin = new GracefulShutdown(); // the defaults: drain, and the signals
+        const client = await start([plugin, new Encoding('json')]);
+
+        const queue = unique('ack');
+        let started = false;
+        let acked = false;
+
+        await client.type('direct').queue(queue, { autoDelete: false })
+            .subscribe(queue, async(msg) => {
+                started = true;
+                await sleep(200);
+                msg.ack();
+                acked = true;
+            });
+
+        await client.type('direct').publish(queue, { n: 1 });
+        while (!started) await sleep(5);
+
+        const closed = new Promise((resolve) => client.on('close', resolve));
+        process.emit('SIGTERM');
+        await closed;
+        assert.strictEqual(acked, true, 'the connection was closed before the handler had finished');
+
+        const conn = await amqplib.connect(URL);
+        const ch = await conn.createChannel();
+        try {
+            const { messageCount } = await ch.checkQueue(queue);
+            assert.strictEqual(messageCount, 0, 'the message came back: its acknowledgement was lost');
+        } finally {
+            await ch.deleteQueue(queue).catch(() => {});
+            await conn.close();
+        }
+    });
+
     // The point of tracking every handler in _consume(): the retry plugin does most of its work after the
     // user's function has thrown (it declares a delay queue, republishes the message, acknowledges the original).
     // A tracker that only wrapped the user's function let drain() return in the middle of that, and the
@@ -142,7 +180,8 @@ describe('graceful shutdown: drain', function() {
     });
 
     it('does not cancel the reply queue of rpc calls made by the messages in progress', async() => {
-        const plugin = new GracefulShutdown({ drain: true });
+        // the defaults: drain on, with the signals left to the application
+        const plugin = new GracefulShutdown({ signals: false });
         const service = await start([plugin, new Encoding('json'), new RPC({ timeout: 5000 })]);
         const downstream = await start([new Encoding('json'), new RPC({ timeout: 5000 })]);
 

@@ -4,15 +4,19 @@ const { Scopes } = require('../lib/constants');
 const DEFAULT_DRAIN_TIMEOUT = 30000;
 
 /**
- * Closes the connection when the process is told to stop (SIGINT, SIGTERM).
+ * Closes the connection when the process is told to stop (SIGINT, SIGTERM), after the messages being
+ * processed are done.
  *
- * By default the connection is closed at once: a message that is being processed loses its channel, and
- * whatever the handler still does with it (acknowledge, publish, call another service) fails.
+ * The consumers are cancelled first, so that no new message is taken, the messages being processed are
+ * waited for (at most `timeout` ms, 30000 by default), and only then is the connection closed. A message
+ * that is still in progress at the timeout is never acknowledged: the broker redelivers it.
  *
- * With `drain`, the consumers are cancelled first, so that no new message is taken, the messages being
- * processed are waited for (at most `timeout` ms, 30000 by default), and only then is the connection
- * closed. A message that is still in progress at the timeout is never acknowledged: the broker
- * redelivers it.
+ * `drain: false` closes the connection at once instead, as this plugin used to: a message that is being
+ * processed loses its channel, and whatever the handler still does with it (acknowledge, publish, call
+ * another service) fails. `drain: { timeout }` sets the time to wait.
+ *
+ * `signals: false` leaves the signals to the application, which then calls `stopConsuming()` and `drain()`
+ * itself, and closes the client when it is ready (it may have other things to stop first).
  *
  * Every handler of every subscription is tracked, whatever the plugins around it do (the whole handler
  * counts, including a retry being scheduled or an RPC reply being sent). `stopConsuming()` and `drain()`
@@ -26,9 +30,10 @@ module.exports = class GracefulShutdown extends Plugin {
     constructor(options) {
         super('graceful');
 
-        const { drain = false } = options ?? {};
+        const { drain = true, signals = true } = options ?? {};
 
         this.options = {
+            signals,
             drain: drain && {
                 timeout: DEFAULT_DRAIN_TIMEOUT,
                 ...(drain === true ? {} : drain)
@@ -36,6 +41,7 @@ module.exports = class GracefulShutdown extends Plugin {
         };
 
         this._subscriptions = new Set();
+        this._channels = new Set();
         this._waiters = [];
         this._inflight = 0;
     }
@@ -103,7 +109,20 @@ module.exports = class GracefulShutdown extends Plugin {
                         `after ${this.options.drain.timeout}ms, closing anyway`);
                 }
             })
+            .then(() => this._closeChannels())
             .then(closeConnection);
+    }
+
+    // A message acknowledged just before the connection is closed is not acknowledged at all: the broker
+    // requeues it, and it is processed again. Closing the channels first waits for the broker to have taken
+    // the acknowledgements, as Client.close() does.
+    _closeChannels() {
+        const channels = [...this._channels];
+        this._channels.clear();
+
+        return Promise.all(channels.map((ch) => ch.close()
+            .catch((err) => this.logger.debug(
+                `[AMQP:graceful] Could not close a channel: ${err && err.message}`))));
     }
 
     _onConnection(conn) {
@@ -116,6 +135,8 @@ module.exports = class GracefulShutdown extends Plugin {
             this.logger.debug(`[AMQP:graceful] Received ${sig}, closing connection...`);
             return this._shutdown(conn);
         };
+
+        if (!this.options.signals) return conn;
 
         process.once('SIGINT', close);
         process.once('SIGTERM', close);
@@ -149,7 +170,15 @@ module.exports = class GracefulShutdown extends Plugin {
         };
     }
 
+    _onChannel(ch) {
+        this._channels.add(ch);
+        ch.on('close', () => this._channels.delete(ch));
+        return ch;
+    }
+
     init() {
+        this.scopes[Scopes.CHANNEL] = (create) => () => create().then((ch) => this._onChannel(ch));
+
         this.scopes[Scopes.CONNECTION] = (connect) =>
             (url, socketOptions) => connect(url, socketOptions)
                 .then((conn) => this._onConnection(conn));

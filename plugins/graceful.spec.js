@@ -12,7 +12,8 @@ describe('graceful plugin', () => {
     let connect = Promise.resolve;
 
     beforeEach(() => {
-        const plugin = new GracefulShutdown().enable();
+        // drain: false, the original behaviour: the connection is closed at once
+        const plugin = new GracefulShutdown({ drain: false }).enable();
         connect = plugin
             .install(Scopes.CONNECTION)(_connect);
 
@@ -262,6 +263,40 @@ describe('graceful plugin: draining', () => {
             assert.ok(plugin.logger.warn.calledOnce);
         });
 
+        it('drains by default', async() => {
+            plugin = enabled();
+            assert.strictEqual(plugin.options.drain.timeout, 30000);
+            await subscribe(async() => { await sleep(60); order.push('handled'); });
+            await connect();
+
+            channel.handler({ content: 1 });
+            process.emit('SIGTERM');
+
+            await sleep(20);
+            assert.ok(!conn.close.called, 'closed while a message was in progress');
+
+            await sleep(120);
+            assert.deepStrictEqual(order, ['cancel', 'handled', 'close']);
+        });
+
+        it('leaves the signals to the application with signals: false, which can still drain', async() => {
+            plugin = enabled({ signals: false });
+            await subscribe(async() => { await sleep(40); order.push('handled'); });
+            await connect();
+
+            assert.strictEqual(process.listenerCount('SIGTERM'), 0);
+            assert.strictEqual(process.listenerCount('SIGINT'), 0);
+
+            channel.handler({});
+            process.emit('SIGTERM');
+            await sleep(10);
+            assert.ok(!conn.close.called);
+
+            await plugin.stopConsuming();
+            assert.strictEqual(await plugin.drain(1000), true);
+            assert.deepStrictEqual(order, ['cancel', 'handled']);
+        });
+
         it('closes only once, however many signals come', async() => {
             plugin = enabled({ drain: true });
             await subscribe(() => {});
@@ -274,8 +309,8 @@ describe('graceful plugin: draining', () => {
             assert.ok(conn.close.calledOnce);
         });
 
-        it('still closes at once without drain, a message in progress or not', async() => {
-            plugin = enabled();
+        it('closes at once with drain: false, a message in progress or not', async() => {
+            plugin = enabled({ drain: false });
             await subscribe(() => sleep(100));
             await connect();
 

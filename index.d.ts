@@ -54,9 +54,15 @@ export namespace Plugins {
         interface GracefulShutdown {
             /**
              * On SIGINT and SIGTERM, stop the subscriptions and wait for the messages being processed before
-             * closing the connection, instead of closing it at once. `true`: wait up to 30000 ms.
+             * closing the connection. Default: `true`, which waits up to 30000 ms. `false` closes the
+             * connection at once.
              */
             drain?: boolean | { timeout?: number }
+            /**
+             * Default: `true`. `false` does not handle SIGINT and SIGTERM: the application does, with
+             * `stopConsuming()` and `drain()` of the plugin instance, and closes the client itself.
+             */
+            signals?: boolean
         }
         interface ConnectionRetry {
             retries?: number

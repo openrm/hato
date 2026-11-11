@@ -31,6 +31,7 @@ new hato.Client('amqp://localhost:5672', {
 const graceful = new plugins.GracefulShutdown({ drain: { timeout: 20_000 } });
 new plugins.GracefulShutdown();
 new plugins.GracefulShutdown({ drain: true });
+new plugins.GracefulShutdown({ drain: false, signals: false });
 new hato.Client('amqp://localhost:5672', { plugins: [graceful] });
 
 graceful.stopConsuming()
