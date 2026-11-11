@@ -76,6 +76,39 @@ client
     .catch(console.error);
 ```
 
+## Shutting down
+
+`GracefulShutdown` closes the connection on `SIGINT` and `SIGTERM`. By default it does so at once, and a message that is being processed loses its channel: whatever its handler still does (acknowledge, publish, call another service) fails.
+
+With `drain`, the subscriptions are cancelled first so that no new message is taken, the messages being processed are waited for, and only then is the connection closed:
+
+```js
+const { Client, plugins } = require('hato');
+
+const client = new Client(BROKER_URL, {
+    plugins: [
+        new plugins.GracefulShutdown({ drain: { timeout: 25000 } }), // `drain: true` waits up to 30000 ms
+        // ...
+    ]
+});
+```
+
+A whole handler is waited for, whichever plugins surround it: a retry being scheduled by `Retry` and a reply being sent by `RPC` count as part of it. A message still in progress at the timeout is not acknowledged, so the broker redelivers it. The plugin position in the list does not matter.
+
+The process has to be given the time: with Kubernetes, `terminationGracePeriodSeconds` has to exceed the timeout.
+
+An application that handles the signals itself can use the instance instead:
+
+```js
+const graceful = new plugins.GracefulShutdown();
+
+process.on('SIGTERM', async() => {
+    await graceful.stopConsuming();       // the RPC reply queue is left alone: the messages in progress may wait for it
+    const drained = await graceful.drain(25000); // false if the messages are still in progress at the timeout
+    await client.close();
+});
+```
+
 ## Running Tests
 
 Make sure you have a message broker running. The tests expect [RabbitMQ](https://www.rabbitmq.com/).

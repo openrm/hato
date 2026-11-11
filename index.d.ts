@@ -28,9 +28,18 @@ export namespace Plugins {
     interface Plugin<T> extends Plugins.Base {
         new(options?: T): Plugin<T>
     }
+    /** An instance of the GracefulShutdown plugin; the methods are for an application that handles the signals itself */
+    interface GracefulShutdownPlugin extends Plugin<Options.GracefulShutdown> {
+        /** The number of messages being processed */
+        readonly inflight: number
+        /** Stops the delivery of new messages to the subscriptions (not the reply queue of the RPC plugin) */
+        stopConsuming(): Promise<void>
+        /** Resolves true once no message is being processed, false if `timeout` ms pass first (default: that of the plugin, or 30000) */
+        drain(timeout?: number): Promise<boolean>
+    }
     interface Defaults {
         Base: Base
-        GracefulShutdown: Plugin<Options.GracefulShutdown>
+        GracefulShutdown: { new(options?: Options.GracefulShutdown): GracefulShutdownPlugin }
         ConnectionRetry: Plugin<Options.ConnectionRetry>
         Duplex: Plugin<Options.Duplex>
         DLX: Plugin<Options.DLX>
@@ -42,7 +51,13 @@ export namespace Plugins {
         DefaultOptions: Plugin<Options.DefaultOptions>
     }
     namespace Options {
-        type GracefulShutdown = null;
+        interface GracefulShutdown {
+            /**
+             * On SIGINT and SIGTERM, stop the subscriptions and wait for the messages being processed before
+             * closing the connection, instead of closing it at once. `true`: wait up to 30000 ms.
+             */
+            drain?: boolean | { timeout?: number }
+        }
         interface ConnectionRetry {
             retries?: number
             min?: number
