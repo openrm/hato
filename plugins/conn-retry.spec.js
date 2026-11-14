@@ -174,6 +174,16 @@ describe('conn-retry plugin', () => {
             assert.ok(new Set(capped).size > 1, 'the waits are all the same');
         });
 
+        it('should not leave a signal listener behind per attempt', async() => {
+            const before = ['SIGINT', 'SIGTERM'].map((sig) => process.listenerCount(sig));
+            const connect = () => Promise.reject(new Error('refused'));
+            const attempt = new ConnectionRetry({ retries: 25 }).enable().install(Scopes.CONNECTION)(connect);
+
+            await assert.rejects(attempt('amqp://a'), /refused/);
+
+            assert.deepStrictEqual(['SIGINT', 'SIGTERM'].map((sig) => process.listenerCount(sig)), before);
+        });
+
         it('should not jitter when told so', async() => {
             const connect = () => Promise.reject(new Error('refused'));
             const attempt = new ConnectionRetry({ retries: 5, jitter: 0 }).enable().install(Scopes.CONNECTION)(connect);

@@ -44,9 +44,6 @@ module.exports = class extends Plugin {
                 if (0 < c) this.logger.debug(
                     '[AMQP:conn-retry] Retrying to connect...');
 
-                const destroy = this.destroy.bind(this);
-                this.termSignals.forEach((sig) => process.once(sig, destroy));
-
                 // an array of urls is rotated through, one per attempt,
                 // starting from a per-connect offset
                 const [url, ...rest] = args;
@@ -70,9 +67,6 @@ module.exports = class extends Plugin {
                                     .catch(reject), wait);
 
                             this.timeouts.push(timer);
-                        }).then((conn) => {
-                            this.termSignals.forEach((sig) => process.off(sig, destroy));
-                            return conn;
                         });
                     });
             };
@@ -82,7 +76,15 @@ module.exports = class extends Plugin {
                 const offset = shuffle && Array.isArray(url) && url.length
                     ? Math.floor(Math.random() * url.length) : 0;
 
-                return retryable(0, offset, ...args);
+                // One listener per signal for the whole connect, not one per attempt: with dozens of attempts
+                // they would pile up (MaxListenersExceededWarning) and outlive the connection.
+                const destroy = this.destroy.bind(this);
+                this.termSignals.forEach((sig) => process.once(sig, destroy));
+                const done = () => this.termSignals.forEach((sig) => process.off(sig, destroy));
+
+                return retryable(0, offset, ...args).then(
+                    (conn) => { done(); return conn; },
+                    (err) => { done(); throw err; });
             };
         };
     }
