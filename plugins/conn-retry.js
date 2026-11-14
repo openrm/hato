@@ -1,11 +1,22 @@
 const Plugin = require('./base');
 const { Scopes: { CONNECTION } } = require('../lib/constants');
 
+// Exponential backoff capped at `max`. `jitter` (0 to 1) takes that share of the wait away at random, so that
+// the replicas of a service that lost the broker together do not all come back on the same second.
 const createBackoff = ({
     min = 1 * 1e3,
     max = 10 * 1e3,
-    base = 2
-}) => (c) => Math.min(max, Math.pow(base, c) * min);
+    base = 2,
+    jitter = 0.5
+}) => (c) => {
+    const wait = Math.min(max, Math.pow(base, c) * min);
+    return Math.round(wait * (1 - jitter * Math.random()));
+};
+
+// 30 attempts with the default backoff wait about 4.5 minutes in total, longer than a broker pod needs to move to
+// another node (image pull, volume attach, a pending pod waiting for room) and shorter than a service's probes
+// would tolerate if it were stuck for good.
+const DEFAULT_RETRIES = 30;
 
 module.exports = class extends Plugin {
 
@@ -19,7 +30,7 @@ module.exports = class extends Plugin {
     }
 
     init() {
-        const { retries = 5, shuffle = true } = this.options;
+        const { retries = DEFAULT_RETRIES, shuffle = true } = this.options;
         const backoff = createBackoff(this.options);
 
         this.scopes[CONNECTION] = this.retry(retries, backoff, shuffle);
