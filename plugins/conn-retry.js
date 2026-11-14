@@ -1,11 +1,22 @@
 const Plugin = require('./base');
 const { Scopes: { CONNECTION } } = require('../lib/constants');
 
+// Exponential backoff capped at `max`. `jitter` (0 to 1) takes that share of the wait away at random, so that
+// the replicas of a service that lost the broker together do not all come back on the same second.
 const createBackoff = ({
     min = 1 * 1e3,
     max = 10 * 1e3,
-    base = 2
-}) => (c) => Math.min(max, Math.pow(base, c) * min);
+    base = 2,
+    jitter = 0.5
+}) => (c) => {
+    const wait = Math.min(max, Math.pow(base, c) * min);
+    return Math.round(wait * (1 - jitter * Math.random()));
+};
+
+// 30 attempts with the default backoff wait about 4.5 minutes in total, longer than a broker pod needs to move to
+// another node (image pull, volume attach, a pending pod waiting for room) and shorter than a service's probes
+// would tolerate if it were stuck for good.
+const DEFAULT_RETRIES = 30;
 
 module.exports = class extends Plugin {
 
@@ -19,7 +30,7 @@ module.exports = class extends Plugin {
     }
 
     init() {
-        const { retries = 5, shuffle = true } = this.options;
+        const { retries = DEFAULT_RETRIES, shuffle = true } = this.options;
         const backoff = createBackoff(this.options);
 
         this.scopes[CONNECTION] = this.retry(retries, backoff, shuffle);
@@ -32,9 +43,6 @@ module.exports = class extends Plugin {
             const retryable = (c, offset, ...args) => {
                 if (0 < c) this.logger.debug(
                     '[AMQP:conn-retry] Retrying to connect...');
-
-                const destroy = this.destroy.bind(this);
-                this.termSignals.forEach((sig) => process.once(sig, destroy));
 
                 // an array of urls is rotated through, one per attempt,
                 // starting from a per-connect offset
@@ -59,9 +67,6 @@ module.exports = class extends Plugin {
                                     .catch(reject), wait);
 
                             this.timeouts.push(timer);
-                        }).then((conn) => {
-                            this.termSignals.forEach((sig) => process.off(sig, destroy));
-                            return conn;
                         });
                     });
             };
@@ -71,7 +76,15 @@ module.exports = class extends Plugin {
                 const offset = shuffle && Array.isArray(url) && url.length
                     ? Math.floor(Math.random() * url.length) : 0;
 
-                return retryable(0, offset, ...args);
+                // One listener per signal for the whole connect, not one per attempt: with dozens of attempts
+                // they would pile up (MaxListenersExceededWarning) and outlive the connection.
+                const destroy = this.destroy.bind(this);
+                this.termSignals.forEach((sig) => process.once(sig, destroy));
+                const done = () => this.termSignals.forEach((sig) => process.off(sig, destroy));
+
+                return retryable(0, offset, ...args).then(
+                    (conn) => { done(); return conn; },
+                    (err) => { done(); throw err; });
             };
         };
     }

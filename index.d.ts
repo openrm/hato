@@ -66,10 +66,15 @@ export namespace Plugins {
             signals?: boolean | NodeJS.Signals[]
         }
         interface ConnectionRetry {
+            /** attempts before giving up (default: 30, about 4.5 minutes with the default backoff) */
             retries?: number
+            /** first wait in ms (default: 1000) */
             min?: number
+            /** longest wait in ms (default: 10000) */
             max?: number
             base?: number
+            /** share of each wait, 0 to 1, taken away at random so that replicas do not retry together (default: 0.5) */
+            jitter?: number
             /** start from a random url when given an array (default: true) */
             shuffle?: boolean
         }

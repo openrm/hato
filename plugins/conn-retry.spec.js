@@ -129,4 +129,68 @@ describe('conn-retry plugin', () => {
             })
             .catch(done);
     });
+    describe('defaults', () => {
+        let waits;
+        const realSetTimeout = global.setTimeout;
+
+        beforeEach(() => {
+            waits = [];
+            // run the waits at once and record them
+            global.setTimeout = (fn, ms) => {
+                waits.push(ms);
+                return realSetTimeout(fn, 0);
+            };
+        });
+
+        afterEach(() => {
+            global.setTimeout = realSetTimeout;
+        });
+
+        it('should keep trying for several minutes, so that a broker moving to another node is waited for', async() => {
+            let count = 0;
+            const connect = () => {
+                count++;
+                return Promise.reject(new Error('refused'));
+            };
+            const attempt = new ConnectionRetry().enable().install(Scopes.CONNECTION)(connect);
+
+            await assert.rejects(attempt('amqp://a'), /refused/);
+
+            assert.strictEqual(count, 30);
+            const total = waits.reduce((a, b) => a + b, 0);
+            assert.ok(total > 2 * 60 * 1000, `waited only ${total}ms`);
+            assert.ok(total < 5 * 60 * 1000, `waited ${total}ms`);
+        });
+
+        it('should cap the wait and spread it with jitter', async() => {
+            const connect = () => Promise.reject(new Error('refused'));
+            const attempt = new ConnectionRetry({ retries: 12 }).enable().install(Scopes.CONNECTION)(connect);
+
+            await assert.rejects(attempt('amqp://a'), /refused/);
+
+            assert.ok(waits.every((ms) => ms <= 10000), 'a wait is above the cap');
+            const capped = waits.slice(5); // 2^5 s is past the cap
+            assert.ok(capped.every((ms) => ms >= 5000), 'jitter takes more than half of the wait away');
+            assert.ok(new Set(capped).size > 1, 'the waits are all the same');
+        });
+
+        it('should not leave a signal listener behind per attempt', async() => {
+            const before = ['SIGINT', 'SIGTERM'].map((sig) => process.listenerCount(sig));
+            const connect = () => Promise.reject(new Error('refused'));
+            const attempt = new ConnectionRetry({ retries: 25 }).enable().install(Scopes.CONNECTION)(connect);
+
+            await assert.rejects(attempt('amqp://a'), /refused/);
+
+            assert.deepStrictEqual(['SIGINT', 'SIGTERM'].map((sig) => process.listenerCount(sig)), before);
+        });
+
+        it('should not jitter when told so', async() => {
+            const connect = () => Promise.reject(new Error('refused'));
+            const attempt = new ConnectionRetry({ retries: 5, jitter: 0 }).enable().install(Scopes.CONNECTION)(connect);
+
+            await assert.rejects(attempt('amqp://a'), /refused/);
+
+            assert.deepStrictEqual(waits, [1000, 2000, 4000, 8000]);
+        });
+    });
 });
