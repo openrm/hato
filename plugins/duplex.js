@@ -26,9 +26,17 @@ class DuplexConnection extends EventEmitter {
         this._connect = connect;
     }
     connect(...args) {
+        // The two connections are one to the owner of the client: `close` is emitted once, when the first of them
+        // closes. An owner that connects again on `close` would otherwise do it twice, with another client each time.
+        let closed = false;
         const cxns = Object.values(Modes).map((mode) => this._conns[mode] = this._connect(...args)
             .then((conn) => {
-                helpers.events.forward(conn, this, 'error', 'close');
+                helpers.events.forward(conn, this, 'error');
+                conn.on('close', (...args) => {
+                    if (closed) return;
+                    closed = true;
+                    this.emit('close', ...args);
+                });
                 return conn;
             }));
         return Promise.all(cxns).then(() => this);
